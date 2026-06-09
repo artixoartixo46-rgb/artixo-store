@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Lanka Bazaar — Sri Lankan Marketplace Design System
+   All colors HSL. Saffron + Deep Blue palette.
+*/
+
+@layer base {
+  :root {
+    --background: 40 38% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Sri Lanka Gold #FFD100 */
+    --primary: 49 100% 50%;
+    --primary-foreground: 343 73% 32%;
+    --primary-glow: 49 100% 62%;
+
+    /* Sri Lanka Maroon Red #8D153A */
+    --secondary: 343 73% 32%;
+    --secondary-foreground: 49 100% 95%;
+
+    --muted: 40 20% 94%;
+    --muted-foreground: 222 15% 40%;
+
+    --accent: 168 76% 36%;
+    --accent-foreground: 40 38% 98%;
+
+    --destructive: 0 84% 55%;
+    --destructive-foreground: 40 38% 98%;
+
+    --success: 142 70% 40%;
+    --success-foreground: 40 38% 98%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 343 73% 32%;
+
+    --radius: 0.75rem;
+
+    /* Gradients — Sri Lanka flag inspired */
+    --gradient-hero: linear-gradient(135deg, hsl(343 73% 32%) 0%, hsl(343 70% 42%) 50%, hsl(49 100% 50%) 100%);
+    --gradient-saffron: linear-gradient(135deg, hsl(49 100% 50%), hsl(45 100% 58%));
+    --gradient-royal: linear-gradient(135deg, hsl(343 73% 32%), hsl(343 70% 42%));
+    --gradient-banner: linear-gradient(135deg, hsl(343 73% 32%) 0%, hsl(343 70% 28%) 60%, hsl(49 100% 50%) 100%);
+
+    /* Shadows */
+    --shadow-soft: 0 2px 8px -2px hsl(343 73% 12% / 0.1);
+    --shadow-card: 0 4px 16px -4px hsl(343 73% 12% / 0.12);
+    --shadow-glow: 0 8px 32px -8px hsl(49 100% 50% / 0.45);
+    --shadow-elevated: 0 12px 40px -12px hsl(343 73% 12% / 0.2);
+
+    /* Animation */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --sidebar-background: 343 73% 22%;
+    --sidebar-foreground: 49 100% 95%;
+    --sidebar-primary: 49 100% 50%;
+    --sidebar-primary-foreground: 343 73% 22%;
+    --sidebar-accent: 343 60% 32%;
+    --sidebar-accent-foreground: 49 100% 95%;
+    --sidebar-border: 343 60% 32%;
+    --sidebar-ring: 49 100% 50%;
+  }
+
+  .dark {
+    --background: 343 30% 8%;
+    --foreground: 49 100% 95%;
+    --card: 343 30% 12%;
+    --card-foreground: 49 100% 95%;
+    --popover: 343 30% 12%;
+    --popover-foreground: 49 100% 95%;
+    --primary: 49 100% 55%;
+    --primary-foreground: 343 73% 18%;
+    --secondary: 343 50% 22%;
+    --secondary-foreground: 49 100% 95%;
+    --muted: 343 25% 18%;
+    --muted-foreground: 49 20% 70%;
+    --accent: 168 70% 42%;
+    --accent-foreground: 343 30% 8%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 49 100% 95%;
+    --border: 343 25% 22%;
+    --input: 343 25% 22%;
+    --ring: 49 100% 55%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground font-sans antialiased; }
+  h1, h2, h3, h4 { @apply font-bold tracking-tight; }
+}
+
+@layer utilities {
+  .gradient-hero { background: var(--gradient-hero); }
+  .gradient-saffron { background: var(--gradient-saffron); }
+  .gradient-royal { background: var(--gradient-royal); }
+  .gradient-banner { background: var(--gradient-banner); }
+  .shadow-soft { box-shadow: var(--shadow-soft); }
+  .shadow-card { box-shadow: var(--shadow-card); }
+  .shadow-glow { box-shadow: var(--shadow-glow); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .transition-smooth { transition: var(--transition-smooth); }
+  .transition-bounce { transition: var(--transition-bounce); }
+}

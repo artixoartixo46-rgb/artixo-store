@@ -70,11 +70,11 @@ export const HeroBanner = () => {
           alt={b.title ?? "Banner"}
           className="absolute inset-0 w-full h-full object-cover animate-fade-in"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-secondary/85 via-secondary/60 to-secondary/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
 
         <div className="relative container h-full flex items-center">
-          <div className="max-w-2xl space-y-6 text-secondary-foreground animate-fade-in" key={`c-${b.id}`}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm font-semibold text-secondary-foreground shadow-glass">
+          <div className="max-w-2xl space-y-6 text-white animate-fade-in" key={`c-${b.id}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold text-white">
               🇱🇰 Sri Lanka's #1 Marketplace
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">

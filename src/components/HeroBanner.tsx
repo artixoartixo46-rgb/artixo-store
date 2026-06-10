@@ -73,7 +73,7 @@ export const HeroBanner = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-secondary/85 via-secondary/60 to-secondary/20" />
 
         <div className="relative container h-full flex items-center">
-          <div className="max-w-2xl space-y-6 text-secondary-foreground animate-fade-in p-8 rounded-3xl glass-dark" key={`c-${b.id}`}>
+          <div className="max-w-2xl space-y-6 text-secondary-foreground animate-fade-in" key={`c-${b.id}`}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm font-semibold text-secondary-foreground shadow-glass">
               🇱🇰 Sri Lanka's #1 Marketplace
             </div>

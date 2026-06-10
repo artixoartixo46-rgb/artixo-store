@@ -92,12 +92,6 @@ const Auth = () => {
   };
 
   const google = async () => {
-    // Check if Google OAuth is configured before attempting — avoids blank error page
-    const GOOGLE_ENABLED = import.meta.env.VITE_GOOGLE_OAUTH_ENABLED === "true";
-    if (!GOOGLE_ENABLED) {
-      toast.info("Google sign-in coming soon! Use email & password for now.", { duration: 6000 });
-      return;
-    }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({

@@ -16,7 +16,7 @@ export const WhyShopWithUs = () => (
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {items.map((b) => (
-        <Card key={b.title} className="p-5 text-center hover:shadow-glow hover:-translate-y-1 transition-bounce border-border/60">
+        <Card key={b.title} className="p-5 text-center animate-fade-in">
           <div className="h-12 w-12 mx-auto rounded-xl gradient-saffron flex items-center justify-center text-primary-foreground mb-3">
             <b.icon className="h-6 w-6" />
           </div>

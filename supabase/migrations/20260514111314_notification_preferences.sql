@@ -1,4 +1,4 @@
-﻿-- Notification preferences table for email/SMS toggles
+-- Notification preferences table for email/SMS toggles
 CREATE TABLE public.notification_preferences (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE,

@@ -27,7 +27,7 @@ export const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-lg">
+    <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
       <div className="container flex h-16 items-center gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <img src={artixoLogo} alt="Artixo" className="h-14 w-14 md:h-16 md:w-16 object-contain" />
@@ -43,7 +43,7 @@ export const Header = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products, brands & more..."
-              className="pl-10 pr-4 h-10 rounded-full bg-muted/60 border-transparent focus-visible:bg-background"
+              className="pl-10 pr-4 h-10 rounded-full input-glass border-transparent focus-visible:bg-white/80 focus-visible:border-white/60 transition-fluid"
             />
           </div>
         </form>

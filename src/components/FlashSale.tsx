@@ -29,7 +29,7 @@ export const FlashSale = ({ products }: Props) => {
 
   const Box = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
-      <div className="bg-secondary text-secondary-foreground rounded-md px-2 py-1 font-display font-bold text-lg min-w-[2.5rem] text-center tabular-nums">
+      <div className="glass-secondary text-secondary-foreground rounded-xl px-2 py-1 font-display font-bold text-lg min-w-[2.5rem] text-center tabular-nums shadow-soft">
         {String(value).padStart(2, "0")}
       </div>
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{label}</span>
@@ -38,7 +38,7 @@ export const FlashSale = ({ products }: Props) => {
 
   return (
     <section className="container py-8">
-      <Card className="overflow-hidden border-0 shadow-card">
+      <Card className="overflow-hidden p-0">
         <div className="gradient-saffron px-4 md:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-primary-foreground">
             <Zap className="h-5 w-5 fill-current" />

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import artixoLogo from "@/assets/artixo-logo.png";
 
 export const Footer = () => (
-  <footer className="border-t border-border/40 bg-secondary text-secondary-foreground mt-20">
+  <footer className="border-t border-white/20 mt-20 glass-secondary text-secondary-foreground">
     <div className="container py-12 grid gap-8 md:grid-cols-4">
       <div>
         <div className="flex items-center gap-2 mb-3">

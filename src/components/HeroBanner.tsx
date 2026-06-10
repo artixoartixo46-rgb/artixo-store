@@ -73,8 +73,8 @@ export const HeroBanner = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-secondary/85 via-secondary/60 to-secondary/20" />
 
         <div className="relative container h-full flex items-center">
-          <div className="max-w-2xl space-y-6 text-secondary-foreground animate-fade-in" key={`c-${b.id}`}>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 backdrop-blur text-sm font-medium">
+          <div className="max-w-2xl space-y-6 text-secondary-foreground animate-fade-in p-8 rounded-3xl glass-dark" key={`c-${b.id}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-sm font-semibold text-secondary-foreground shadow-glass">
               🇱🇰 Sri Lanka's #1 Marketplace
             </div>
             <h1 className="font-display text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
@@ -100,14 +100,14 @@ export const HeroBanner = () => {
           <>
             <button
               onClick={() => setIdx((i) => (i - 1 + banners.length) % banners.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background flex items-center justify-center text-foreground shadow-lg"
+              className="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full glass hover:glass-strong flex items-center justify-center text-foreground transition-fluid"
               aria-label="Previous banner"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={() => setIdx((i) => (i + 1) % banners.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-background/80 hover:bg-background flex items-center justify-center text-foreground shadow-lg"
+              className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full glass hover:glass-strong flex items-center justify-center text-foreground transition-fluid"
               aria-label="Next banner"
             >
               <ChevronRight className="h-5 w-5" />

@@ -22,7 +22,7 @@ export const Newsletter = () => {
 
   return (
     <section className="container py-8">
-      <Card className="gradient-royal text-secondary-foreground p-6 md:p-10 border-0 shadow-elevated overflow-hidden relative">
+      <Card className="gradient-royal text-secondary-foreground p-6 md:p-10 border border-white/20 shadow-glass-elevated overflow-hidden relative glass-specular">
         <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
         <div className="relative grid md:grid-cols-2 gap-6 items-center">
           <div>
@@ -43,7 +43,7 @@ export const Newsletter = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.lk"
-              className="bg-background text-foreground border-0 h-11"
+              className="input-glass text-foreground border-white/30 h-11"
             />
             <Button type="submit" variant="hero" size="lg" disabled={submitting}>
               {submitting ? "..." : "Subscribe"}

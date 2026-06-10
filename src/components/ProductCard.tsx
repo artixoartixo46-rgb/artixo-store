@@ -43,7 +43,7 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
   };
 
   return (
-    <Card className="group overflow-hidden border-border/60 hover:shadow-elevated transition-smooth animate-fade-in">
+    <Card className="group overflow-hidden animate-fade-in p-0">
       <Link to={`/product/${p.id}`} className="block">
         <div className="aspect-square bg-muted relative overflow-hidden">
           {p.image_url ? (

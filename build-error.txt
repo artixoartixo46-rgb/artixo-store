@@ -1,0 +1,17 @@
+﻿
+> vite_react_shadcn_ts@0.0.0 prebuild
+> npx tsx scripts/generate-sitemap.ts
+
+sitemap.xml written (28 entries)
+
+> vite_react_shadcn_ts@0.0.0 build
+> vite build
+
+node.exe : 'vite' is not recognized as an internal or external command,
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ('vite' is not r...ternal command,:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+operable program or batch file.

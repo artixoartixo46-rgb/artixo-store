@@ -116,7 +116,7 @@ const StripeCardForm = ({ total, onPaymentSuccess, loading, setLoading }: Stripe
         <div className="flex items-center gap-2 mb-3">
           <Lock className="h-4 w-4 text-green-600" />
           <span className="text-sm text-gray-600 font-medium">
-            Secured by Stripe â€” 256-bit SSL encryption
+            Secured by Stripe â€" 256-bit SSL encryption
           </span>
         </div>
         <div className="border rounded-md p-3 bg-gray-50">
@@ -261,7 +261,7 @@ const Checkout = () => {
       toast.success("ðŸŽ‰ Payment successful! Your order is confirmed.");
       navigate("/orders");
     } catch {
-      // Payment succeeded â€” still navigate
+      // Payment succeeded â€" still navigate
       clear();
       toast.success("ðŸŽ‰ Payment successful! Your order is confirmed.");
       navigate("/orders");
@@ -274,7 +274,7 @@ const Checkout = () => {
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left â€” Shipping + Payment */}
+          {/* Left â€" Shipping + Payment */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Shipping Details */}
@@ -383,25 +383,25 @@ const Checkout = () => {
                   {STRIPE_ENABLED && (
                   <div
                     className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-colors ${
-                      paymentMethod === “card”
-                        ? “border-blue-500 bg-blue-50”
-                        : “border-gray-200 hover:border-gray-300”
+                      paymentMethod === "card"
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
-                    onClick={() => setPaymentMethod(“card”)}
+                    onClick={() => setPaymentMethod("card")}
                   >
-                    <RadioGroupItem value=”card” id=”card” />
-                    <CreditCard className=”h-5 w-5 text-blue-600” />
+                    <RadioGroupItem value="card" id="card" />
+                    <CreditCard className="h-5 w-5 text-blue-600" />
                     <div>
-                      <Label htmlFor=”card” className=”cursor-pointer font-semibold”>
+                      <Label htmlFor="card" className="cursor-pointer font-semibold">
                         Credit / Debit Card
                       </Label>
-                      <p className=”text-sm text-gray-500”>
+                      <p className="text-sm text-gray-500">
                         Visa, Mastercard, Amex — Secured by Stripe
                       </p>
                     </div>
-                    <div className=”ml-auto flex gap-1”>
-                      <img src=”https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg” className=”h-6 w-8 object-contain” alt=”Visa” />
-                      <img src=”https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg” className=”h-6 w-8 object-contain” alt=”Mastercard” />
+                    <div className="ml-auto flex gap-1">
+                      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg" className="h-6 w-8 object-contain" alt="Visa" />
+                      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg" className="h-6 w-8 object-contain" alt="Mastercard" />
                     </div>
                   </div>
                   )}
@@ -457,7 +457,7 @@ const Checkout = () => {
                     ) : (
                       <span className="flex items-center gap-2">
                         <Banknote className="h-5 w-5" />
-                        Place Order â€” Pay on Delivery
+                        Place Order â€" Pay on Delivery
                       </span>
                     )}
                   </Button>
@@ -466,7 +466,7 @@ const Checkout = () => {
             </Card>
           </div>
 
-          {/* Right â€” Order Summary */}
+          {/* Right â€" Order Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
               <CardHeader>
@@ -507,7 +507,7 @@ const Checkout = () => {
                     </span>
                   </div>
                   {shipping === 0 && (
-                    <p className="text-xs text-green-600">âœ“ Free shipping on orders over Rs. 5,000</p>
+                    <p className="text-xs text-green-600">âœ" Free shipping on orders over Rs. 5,000</p>
                   )}
                   <div className="border-t pt-2 flex justify-between text-base font-bold text-gray-900">
                     <span>Total</span>

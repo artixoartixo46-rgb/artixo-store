@@ -28,7 +28,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 // --- Stripe setup ---
-const stripePromise = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) : null;
+const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
+const STRIPE_ENABLED = Boolean(STRIPE_KEY);
 
 const CARD_ELEMENT_OPTIONS = {
   style: {
@@ -155,7 +157,7 @@ const Checkout = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cod">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "cod">(STRIPE_ENABLED ? "card" : "cod");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -378,29 +380,31 @@ const Checkout = () => {
                   value={paymentMethod}
                   onValueChange={(v) => setPaymentMethod(v as "card" | "cod")}
                 >
+                  {STRIPE_ENABLED && (
                   <div
                     className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-colors ${
-                      paymentMethod === "card"
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                      paymentMethod === “card”
+                        ? “border-blue-500 bg-blue-50”
+                        : “border-gray-200 hover:border-gray-300”
                     }`}
-                    onClick={() => setPaymentMethod("card")}
+                    onClick={() => setPaymentMethod(“card”)}
                   >
-                    <RadioGroupItem value="card" id="card" />
-                    <CreditCard className="h-5 w-5 text-blue-600" />
+                    <RadioGroupItem value=”card” id=”card” />
+                    <CreditCard className=”h-5 w-5 text-blue-600” />
                     <div>
-                      <Label htmlFor="card" className="cursor-pointer font-semibold">
+                      <Label htmlFor=”card” className=”cursor-pointer font-semibold”>
                         Credit / Debit Card
                       </Label>
-                      <p className="text-sm text-gray-500">
-                        Visa, Mastercard, Amex â€” Secured by Stripe
+                      <p className=”text-sm text-gray-500”>
+                        Visa, Mastercard, Amex — Secured by Stripe
                       </p>
                     </div>
-                    <div className="ml-auto flex gap-1">
-                      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg" className="h-6 w-8 object-contain" alt="Visa" />
-                      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg" className="h-6 w-8 object-contain" alt="Mastercard" />
+                    <div className=”ml-auto flex gap-1”>
+                      <img src=”https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg” className=”h-6 w-8 object-contain” alt=”Visa” />
+                      <img src=”https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg” className=”h-6 w-8 object-contain” alt=”Mastercard” />
                     </div>
                   </div>
+                  )}
 
                   <div
                     className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer transition-colors ${
@@ -422,7 +426,7 @@ const Checkout = () => {
                 </RadioGroup>
 
                 {/* Stripe Card Form */}
-                {paymentMethod === "card" && (
+                {STRIPE_ENABLED && paymentMethod === "card" && (
                   <div className="mt-4">
                     <Elements stripe={stripePromise}>
                       <StripeCardForm

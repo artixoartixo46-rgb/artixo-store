@@ -168,7 +168,7 @@ const SellerDashboard = () => {
     if (error) { toast.error(error.message); return; }
     toast.success("Deleted"); refresh();
   };
-﻿  return (
+  return (
     <div className="container py-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
@@ -277,7 +277,7 @@ const SellerDashboard = () => {
           })()}
         </TabsContent>
       </Tabs>
-﻿
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>

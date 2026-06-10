@@ -54,10 +54,10 @@ const generateReceiptPDF = (order: any) => {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   let y = 74;
-  doc.text(`Name: ${order.customerName ?? "—"}`, 14, y); y += 5;
-  doc.text(`Email: ${order.customerEmail ?? "—"}`, 14, y); y += 5;
-  doc.text(`Phone: ${order.shippingPhone ?? "—"}`, 14, y); y += 5;
-  const addrLines = doc.splitTextToSize(`Address: ${order.shippingAddress ?? "—"}`, pageWidth - 28);
+  doc.text(`Name: ${order.customerName ?? "â€”"}`, 14, y); y += 5;
+  doc.text(`Email: ${order.customerEmail ?? "â€”"}`, 14, y); y += 5;
+  doc.text(`Phone: ${order.shippingPhone ?? "â€”"}`, 14, y); y += 5;
+  const addrLines = doc.splitTextToSize(`Address: ${order.shippingAddress ?? "â€”"}`, pageWidth - 28);
   doc.text(addrLines, 14, y);
   y += addrLines.length * 5 + 4;
   if (order.notes) {
@@ -169,7 +169,7 @@ const AdminPanel = () => {
 
     const pendingSellerList = (psRes.data ?? []).map((r: any) => {
       const u = usersMap[r.user_id] ?? {};
-      return { userId: r.user_id, shopName: u.shop_name ?? "—", fullName: u.full_name ?? "—", email: u.email ?? "—" };
+      return { userId: r.user_id, shopName: u.shop_name ?? "â€”", fullName: u.full_name ?? "â€”", email: u.email ?? "â€”" };
     });
     setPendingSellers(pendingSellerList);
     const rrList = (rrRes.data ?? []).map((r: any) => ({
@@ -179,8 +179,8 @@ const AdminPanel = () => {
       status: r.status,
       adminNote: r.admin_note,
       createdAt: r.created_at ? new Date(r.created_at) : new Date(),
-      customerName: r.profiles?.full_name ?? "—",
-      customerEmail: r.profiles?.email ?? "—",
+      customerName: r.profiles?.full_name ?? "â€”",
+      customerEmail: r.profiles?.email ?? "â€”",
     }));
     setReturnRequests(rrList);
     setPending(pendingList);
@@ -480,7 +480,7 @@ const AdminPanel = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">{p.sellerProfile?.shopName ?? p.sellerProfile?.fullName ?? "—"}</TableCell>
+                          <TableCell className="text-sm">{p.sellerProfile?.shopName ?? p.sellerProfile?.fullName ?? "â€”"}</TableCell>
                           <TableCell className="font-medium">{formatLKR(p.price)}</TableCell>
                           <TableCell>{p.stock}</TableCell>
                           <TableCell className="text-right">
@@ -536,7 +536,7 @@ const AdminPanel = () => {
                                   </div>
                                   <div className="min-w-0 text-xs">
                                     <div className="font-medium truncate">{it.productName}</div>
-                                    <div className="text-muted-foreground">× {it.quantity} · {formatLKR(it.unitPrice)}</div>
+                                    <div className="text-muted-foreground">Ã— {it.quantity} Â· {formatLKR(it.unitPrice)}</div>
                                   </div>
                                 </div>
                               ))}
@@ -544,7 +544,7 @@ const AdminPanel = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-sm align-top">
-                            <div className="font-medium">{o.customerName ?? "—"}</div>
+                            <div className="font-medium">{o.customerName ?? "â€”"}</div>
                             <div className="text-xs text-muted-foreground">{o.customerEmail ?? ""}</div>
                             <div className="text-xs text-muted-foreground mt-1">?? {o.shippingPhone}</div>
                             <div className="text-xs text-muted-foreground mt-1 max-w-[220px]">?? {o.shippingAddress}</div>
@@ -630,7 +630,7 @@ const AdminPanel = () => {
                     />
                   </div>
                   <Button variant="hero" onClick={addSeller} disabled={addingsel}>
-                    {addingsel ? "Adding…" : "Add Seller"}
+                    {addingsel ? "Addingâ€¦" : "Add Seller"}
                   </Button>
                 </Card>
 
@@ -647,9 +647,9 @@ const AdminPanel = () => {
                     <TableBody>
                       {sellers.map((s: any) => (
                         <TableRow key={s.id}>
-                          <TableCell className="font-medium">{s.shopName ?? "—"}</TableCell>
-                          <TableCell>{s.fullName ?? "—"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{s.email ?? "—"}</TableCell>
+                          <TableCell className="font-medium">{s.shopName ?? "â€”"}</TableCell>
+                          <TableCell>{s.fullName ?? "â€”"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{s.email ?? "â€”"}</TableCell>
                         </TableRow>
                       ))}
                       {sellers.length === 0 && (

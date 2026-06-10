@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
@@ -116,7 +116,7 @@ const StripeCardForm = ({ total, onPaymentSuccess, loading, setLoading }: Stripe
         <div className="flex items-center gap-2 mb-3">
           <Lock className="h-4 w-4 text-green-600" />
           <span className="text-sm text-gray-600 font-medium">
-            Secured by Stripe â€" 256-bit SSL encryption
+            Secured by Stripe — 256-bit SSL encryption
           </span>
         </div>
         <div className="border rounded-md p-3 bg-gray-50">
@@ -245,7 +245,7 @@ const Checkout = () => {
     try {
       await saveOrder();
       clear();
-      toast.success("ðŸŽ‰ Order placed! Cash on delivery confirmed.");
+      toast.success("🎉 Order placed! Cash on delivery confirmed.");
       navigate("/orders");
     } catch (err: any) {
       toast.error("Failed to place order. Please try again.");
@@ -258,12 +258,12 @@ const Checkout = () => {
     try {
       await saveOrder(paymentIntentId);
       clear();
-      toast.success("ðŸŽ‰ Payment successful! Your order is confirmed.");
+      toast.success("🎉 Payment successful! Your order is confirmed.");
       navigate("/orders");
     } catch {
-      // Payment succeeded â€" still navigate
+      // Payment succeeded — still navigate
       clear();
-      toast.success("ðŸŽ‰ Payment successful! Your order is confirmed.");
+      toast.success("🎉 Payment successful! Your order is confirmed.");
       navigate("/orders");
     }
   };
@@ -274,7 +274,7 @@ const Checkout = () => {
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left â€" Shipping + Payment */}
+          {/* Left — Shipping + Payment */}
           <div className="lg:col-span-2 space-y-6">
 
             {/* Shipping Details */}
@@ -457,7 +457,7 @@ const Checkout = () => {
                     ) : (
                       <span className="flex items-center gap-2">
                         <Banknote className="h-5 w-5" />
-                        Place Order â€" Pay on Delivery
+                        Place Order — Pay on Delivery
                       </span>
                     )}
                   </Button>
@@ -466,7 +466,7 @@ const Checkout = () => {
             </Card>
           </div>
 
-          {/* Right â€" Order Summary */}
+          {/* Right — Order Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-6">
               <CardHeader>
@@ -507,7 +507,7 @@ const Checkout = () => {
                     </span>
                   </div>
                   {shipping === 0 && (
-                    <p className="text-xs text-green-600">âœ" Free shipping on orders over Rs. 5,000</p>
+                    <p className="text-xs text-green-600">✓ Free shipping on orders over Rs. 5,000</p>
                   )}
                   <div className="border-t pt-2 flex justify-between text-base font-bold text-gray-900">
                     <span>Total</span>
@@ -525,14 +525,4 @@ const Checkout = () => {
                   <p className="flex items-center gap-1">
                     <Banknote className="h-3 w-3 text-orange-600" /> Cash on delivery available
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Checkout;
+            

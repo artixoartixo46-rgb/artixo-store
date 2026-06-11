@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
+import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import { Layout } from "@/components/layout/Layout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -33,6 +34,7 @@ const App = () => (
       <Sonner position="top-center" richColors />
       <BrowserRouter>
         <AuthProvider>
+          <SiteSettingsProvider>
           <CartProvider>
             <Layout>
               <Routes>
@@ -56,6 +58,7 @@ const App = () => (
               </Routes>
             </Layout>
           </CartProvider>
+          </SiteSettingsProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

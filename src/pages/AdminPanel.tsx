@@ -17,11 +17,12 @@ import {
 import { toast } from "sonner";
 import {
   Package, Check, X, Shield, LayoutDashboard, ShoppingBag, Users, ClipboardList,
-  TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw,
+  TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { AdminProductsSection } from "@/components/admin/AdminProductsSection";
 import { AdminBannersSection } from "@/components/admin/AdminBannersSection";
+import { AdminCustomizeSection } from "@/components/admin/AdminCustomizeSection";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileDown } from "lucide-react";
@@ -84,7 +85,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -94,6 +95,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "banners", label: "Banners", icon: ImageIcon },
   { key: "sellers", label: "Sellers", icon: Users },
   { key: "returns", label: "Returns", icon: RotateCcw },
+  { key: "customize", label: "Customize Site", icon: Paintbrush },
 ];
 
 const AdminPanel = () => {
@@ -499,6 +501,7 @@ const AdminPanel = () => {
 
             {section === "products" && user && <AdminProductsSection adminUserId={user.id} />}
             {section === "banners" && <AdminBannersSection />}
+            {section === "customize" && <AdminCustomizeSection />}
 
             {section === "orders" && (
               <Card className="p-0 overflow-hidden">

@@ -123,4 +123,14 @@ export const HeroBanner = () => {
                 <button
                   key={i}
                   onClick={() => setIdx(i)}
-                  className={`h-2 rounded-full tr
+                  className={`h-2 rounded-full transition-all ${i === idx ? "w-6 bg-primary" : "w-2 bg-background/60"}`}
+                  aria-label={`Banner ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+};

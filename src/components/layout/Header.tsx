@@ -107,4 +107,13 @@ export const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-    
+            <Link to="/auth">
+              <Button variant="hero" size="sm">Sign in</Button>
+            </Link>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+

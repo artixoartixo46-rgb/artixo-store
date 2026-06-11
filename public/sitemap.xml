@@ -66,12 +66,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://artixo.lovable.app/product/f1fe3831-bd74-48bc-9328-b5e0c705aba0</loc>
-    <lastmod>2026-06-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://artixo.lovable.app/product/9f97942d-be7b-4020-a543-291e62b690ae</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -98,6 +92,12 @@
   <url>
     <loc>https://artixo.lovable.app/product/d3164859-2855-400d-b367-2f622b28bfae</loc>
     <lastmod>2026-05-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://artixo.lovable.app/product/f1fe3831-bd74-48bc-9328-b5e0c705aba0</loc>
+    <lastmod>2026-06-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

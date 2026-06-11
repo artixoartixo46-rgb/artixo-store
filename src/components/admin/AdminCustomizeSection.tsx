@@ -312,4 +312,97 @@ export const AdminCustomizeSection = () => {
           <CardHeader>
             <CardTitle className="text-base">Hero Banner Size</CardTitle>
             <CardDescription>Controls the height of the main banner on the homepage</CardDescription>
-          </CardHeader
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {BANNER_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => update("banner_height", p.value)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 p-4 transition-all ${
+                    draft.banner_height === p.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-muted/20 hover:border-primary/40"
+                  }`}
+                >
+                  {/* Mini visual representation */}
+                  <div className="relative w-full h-10 rounded overflow-hidden bg-gradient-to-r from-gray-700 to-gray-500 mb-1">
+                    <div
+                      className="absolute bottom-0 left-0 right-0 bg-primary/60 rounded-sm"
+                      style={{ height: p.value === "100vh" ? "100%" : `${Math.round((parseInt(p.value) / 720) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-sm font-semibold">{p.label}</span>
+                  <span className="text-xs text-muted-foreground">{p.desc}</span>
+                </button>
+              ))}
+            </div>
+            {/* Live preview bar */}
+            <div className="mt-4 rounded-xl overflow-hidden border border-border bg-gradient-to-r from-gray-800 to-gray-600 relative"
+              style={{ height: draft.banner_height === "100vh" ? "200px" : `${Math.min(parseInt(draft.banner_height) / 4, 200)}px` }}>
+              <div className="absolute inset-0 flex items-center justify-center text-white/60 text-xs font-medium">
+                Preview — {draft.banner_height === "100vh" ? "Fullscreen" : `${draft.banner_height}px height`}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Sections ── */}
+      {tab === "sections" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Homepage Sections</CardTitle>
+            <CardDescription>Show or hide sections on the homepage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Toggle label="Flash Sale" value={draft.show_flash_sale === "true"} onChange={(v) => update("show_flash_sale", v ? "true" : "false")} description="Limited-time deals with countdown timer" />
+            <Toggle label="Categories" value={draft.show_categories === "true"} onChange={(v) => update("show_categories", v ? "true" : "false")} description="Category browsing grid" />
+            <Toggle label="Why Shop With Us" value={draft.show_why_shop === "true"} onChange={(v) => update("show_why_shop", v ? "true" : "false")} description="4-card trust badges section" />
+            <Toggle label="Newsletter" value={draft.show_newsletter === "true"} onChange={(v) => update("show_newsletter", v ? "true" : "false")} description="Email subscription banner" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Social Links ── */}
+      {tab === "social" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Social Links</CardTitle>
+            <CardDescription>Shown in the footer — leave blank to hide</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <SettingRow label="Facebook" value={draft.facebook_url} onChange={(v) => update("facebook_url", v)} placeholder="https://facebook.com/artixo" />
+            <SettingRow label="Instagram" value={draft.instagram_url} onChange={(v) => update("instagram_url", v)} placeholder="https://instagram.com/artixo" />
+            <SettingRow label="TikTok" value={draft.tiktok_url} onChange={(v) => update("tiktok_url", v)} placeholder="https://tiktok.com/@artixo" />
+            <SettingRow label="WhatsApp Number" value={draft.whatsapp_number} onChange={(v) => update("whatsapp_number", v)} placeholder="+94771234567" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Delivery ── */}
+      {tab === "delivery" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Delivery Settings</CardTitle>
+            <CardDescription>Shown on product and checkout pages</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            <SettingRow label="Free Delivery Min (Rs.)" value={draft.free_delivery_min} onChange={(v) => update("free_delivery_min", v)} type="number" placeholder="2500" />
+            <SettingRow label="Standard Delivery Fee (Rs.)" value={draft.delivery_fee} onChange={(v) => update("delivery_fee", v)} type="number" placeholder="350" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Save button */}
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={() => setDraft({ ...settings })}>Reset</Button>
+        <Button onClick={saveAll} disabled={saving} className="gap-2">
+          <Save className="h-4 w-4" />
+          {saving ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </div>
+  );
+};

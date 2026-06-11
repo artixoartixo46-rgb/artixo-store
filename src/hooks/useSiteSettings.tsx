@@ -163,4 +163,9 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <Ctx.Provider value={{ settings, dbReady, refresh: load, save }}>
-      {childr
+      {children}
+    </Ctx.Provider>
+  );
+};
+
+export const useSiteSettings = () => useContext(Ctx);

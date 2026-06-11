@@ -745,4 +745,17 @@ const StatCard = ({ label, value, sub, icon: Icon, accent }: { label: string; va
         <p className="text-2xl font-bold mt-1 font-display truncate">{value}</p>
         {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
       </div>
-      <div className={`h-10 w-10 rounded-lg f
+      <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${accent ?? "bg-muted"}`}>
+        <Icon className={`h-5 w-5 ${accent ? "text-primary-foreground" : "text-muted-foreground"}`} />
+      </div>
+    </div>
+  </Card>
+);
+
+export default AdminPanel;
+
+
+
+
+
+

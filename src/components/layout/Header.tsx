@@ -11,12 +11,15 @@ import {
 import { useState } from "react";
 import artixoLogo from "@/assets/artixo-logo.png";
 import { NotificationBell } from "@/components/NotificationBell";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export const Header = () => {
   const { user, roles, signOut } = useAuth();
   const { count } = useCart();
+  const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const logoSrc = settings.site_logo || artixoLogo;
 
   const isSeller = roles.includes("seller");
   const isAdmin = roles.includes("admin");
@@ -30,7 +33,7 @@ export const Header = () => {
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
       <div className="container flex h-16 items-center gap-4">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={artixoLogo} alt="Artixo" className="h-14 w-14 md:h-16 md:w-16 object-contain" />
+          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
           <span className="font-display font-bold text-xl hidden sm:inline">
             ARTI<span className="text-primary">XO</span>
           </span>
@@ -104,13 +107,4 @@ export const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Link to="/auth">
-              <Button variant="hero" size="sm">Sign in</Button>
-            </Link>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-};
-
+    

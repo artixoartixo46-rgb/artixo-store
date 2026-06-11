@@ -7,6 +7,7 @@ export interface SiteSettings {
   support_email: string;
   support_phone: string;
   address: string;
+  site_logo: string;
   primary_color: string;
   secondary_color: string;
   accent_color: string;
@@ -14,6 +15,7 @@ export interface SiteSettings {
   announcement_text: string;
   announcement_bg: string;
   announcement_link: string;
+  banner_height: string;
   show_flash_sale: string;
   show_newsletter: string;
   show_why_shop: string;
@@ -32,6 +34,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   support_email: "support@artixo.lk",
   support_phone: "+94 11 000 0000",
   address: "Colombo, Sri Lanka",
+  site_logo: "",
   primary_color: "#FFD100",
   secondary_color: "#8D153A",
   accent_color: "#0D9488",
@@ -39,6 +42,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   announcement_text: "🎉 Free delivery on orders over Rs. 2,500!",
   announcement_bg: "#8D153A",
   announcement_link: "/products",
+  banner_height: "600",
   show_flash_sale: "true",
   show_newsletter: "true",
   show_why_shop: "true",
@@ -159,9 +163,4 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <Ctx.Provider value={{ settings, dbReady, refresh: load, save }}>
-      {children}
-    </Ctx.Provider>
-  );
-};
-
-export const useSiteSettings = () => useContext(Ctx);
+      {childr

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSiteSettings, DEFAULT_SETTINGS, SiteSettings } from "@/hooks/useSiteSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   Palette, Megaphone, LayoutGrid, Share2, Info, Truck,
   Save, AlertTriangle, CheckCircle2, Eye, EyeOff, Copy,
+  ImageIcon, Upload, X, Monitor,
 } from "lucide-react";
 
 const SETUP_SQL = `-- Run this once in your Supabase SQL Editor:
@@ -28,7 +29,8 @@ INSERT INTO site_settings (key, value) VALUES
   ('announcement_bg','#8D153A'),('announcement_link','/products'),
   ('show_flash_sale','true'),('show_newsletter','true'),('show_why_shop','true'),
   ('show_categories','true'),('facebook_url',''),('instagram_url',''),
-  ('tiktok_url',''),('whatsapp_number',''),('free_delivery_min','2500'),('delivery_fee','350')
+  ('tiktok_url',''),('whatsapp_number',''),('free_delivery_min','2500'),('delivery_fee','350'),
+  ('site_logo',''),('banner_height','600')
 ON CONFLICT (key) DO NOTHING;`;
 
 const Toggle = ({
@@ -88,7 +90,8 @@ export const AdminCustomizeSection = () => {
   const [draft, setDraft] = useState<SiteSettings>({ ...settings });
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "sections" | "social" | "delivery">("identity");
+  const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "banner" | "sections" | "social" | "delivery">("identity");
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const update = <K extends keyof SiteSettings>(key: K, val: string) =>
     setDraft((d) => ({ ...d, [key]: val }));
@@ -106,10 +109,31 @@ export const AdminCustomizeSection = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500 * 1024) {
+      toast.error("Logo must be under 500 KB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => update("site_logo", reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const BANNER_PRESETS = [
+    { label: "Small", value: "360", desc: "360px" },
+    { label: "Medium", value: "480", desc: "480px" },
+    { label: "Large", value: "600", desc: "600px" },
+    { label: "XL", value: "720", desc: "720px" },
+    { label: "Fullscreen", value: "100vh", desc: "100% screen height" },
+  ];
+
   const tabs = [
     { key: "identity", label: "Site Info", icon: Info },
     { key: "colors", label: "Colors", icon: Palette },
     { key: "announcement", label: "Announcement", icon: Megaphone },
+    { key: "banner", label: "Banner", icon: Monitor },
     { key: "sections", label: "Sections", icon: LayoutGrid },
     { key: "social", label: "Social", icon: Share2 },
     { key: "delivery", label: "Delivery", icon: Truck },
@@ -127,7 +151,7 @@ export const AdminCustomizeSection = () => {
                 <p className="font-semibold text-amber-900 text-sm">One-time database setup required</p>
                 <p className="text-xs text-amber-700 mt-1 mb-3">
                   Run this SQL once in your{" "}
-                  <a href="https://supabase.com/dashboard/project/djmrevzcetdpjzbggavj/sql/new"
+                  <a href="https://supabase.com/dashboard/project/qzhcxtqkdcygzadcttyf/sql/new"
                      target="_blank" rel="noopener noreferrer"
                      className="underline font-semibold">Supabase SQL Editor</a>{" "}
                   to enable persistent settings. Until then, changes apply live but won't be saved between sessions.
@@ -172,7 +196,7 @@ export const AdminCustomizeSection = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Site Identity</CardTitle>
-            <CardDescription>Name, tagline, and contact details shown across the site</CardDescription>
+            <CardDescription>Name, tagline, contact details, and logo</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
             <SettingRow label="Site Name" value={draft.site_name} onChange={(v) => update("site_name", v)} placeholder="ARTIXO" />
@@ -180,6 +204,41 @@ export const AdminCustomizeSection = () => {
             <SettingRow label="Support Email" value={draft.support_email} onChange={(v) => update("support_email", v)} placeholder="support@artixo.lk" type="email" />
             <SettingRow label="Support Phone" value={draft.support_phone} onChange={(v) => update("support_phone", v)} placeholder="+94 11 000 0000" />
             <SettingRow label="Address" value={draft.address} onChange={(v) => update("address", v)} placeholder="Colombo, Sri Lanka" />
+
+            {/* Logo upload */}
+            <div className="pt-3 border-t border-border/30 mt-3">
+              <p className="text-sm font-medium mb-3">Site Logo</p>
+              <div className="flex items-start gap-4">
+                {/* Preview */}
+                <div className="h-16 w-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden">
+                  {draft.site_logo ? (
+                    <img src={draft.site_logo} alt="Logo preview" className="h-full w-full object-contain p-1" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  {/* File upload */}
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+                  <Button type="button" variant="outline" size="sm" className="gap-1.5 w-full" onClick={() => logoInputRef.current?.click()}>
+                    <Upload className="h-3.5 w-3.5" /> Upload Image (max 500 KB)
+                  </Button>
+                  {/* URL input */}
+                  <Input
+                    value={draft.site_logo.startsWith("data:") ? "" : draft.site_logo}
+                    onChange={(e) => update("site_logo", e.target.value)}
+                    placeholder="Or paste image URL..."
+                    className="h-9 text-sm"
+                  />
+                  {draft.site_logo && (
+                    <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-destructive hover:text-destructive w-full" onClick={() => update("site_logo", "")}>
+                      <X className="h-3.5 w-3.5" /> Remove logo (use default)
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground">PNG or SVG recommended. Leave empty to use the default Artixo logo.</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -247,60 +306,10 @@ export const AdminCustomizeSection = () => {
         </Card>
       )}
 
-      {/* ── Sections ── */}
-      {tab === "sections" && (
+      {/* ── Banner ── */}
+      {tab === "banner" && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Homepage Sections</CardTitle>
-            <CardDescription>Show or hide sections on the homepage</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Toggle label="Flash Sale" value={draft.show_flash_sale === "true"} onChange={(v) => update("show_flash_sale", v ? "true" : "false")} description="Limited-time deals with countdown timer" />
-            <Toggle label="Categories" value={draft.show_categories === "true"} onChange={(v) => update("show_categories", v ? "true" : "false")} description="Category browsing grid" />
-            <Toggle label="Why Shop With Us" value={draft.show_why_shop === "true"} onChange={(v) => update("show_why_shop", v ? "true" : "false")} description="4-card trust badges section" />
-            <Toggle label="Newsletter" value={draft.show_newsletter === "true"} onChange={(v) => update("show_newsletter", v ? "true" : "false")} description="Email subscription banner" />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Social Links ── */}
-      {tab === "social" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Social Links</CardTitle>
-            <CardDescription>Shown in the footer — leave blank to hide</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <SettingRow label="Facebook" value={draft.facebook_url} onChange={(v) => update("facebook_url", v)} placeholder="https://facebook.com/artixo" />
-            <SettingRow label="Instagram" value={draft.instagram_url} onChange={(v) => update("instagram_url", v)} placeholder="https://instagram.com/artixo" />
-            <SettingRow label="TikTok" value={draft.tiktok_url} onChange={(v) => update("tiktok_url", v)} placeholder="https://tiktok.com/@artixo" />
-            <SettingRow label="WhatsApp Number" value={draft.whatsapp_number} onChange={(v) => update("whatsapp_number", v)} placeholder="+94771234567" />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Delivery ── */}
-      {tab === "delivery" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Delivery Settings</CardTitle>
-            <CardDescription>Shown on product and checkout pages</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <SettingRow label="Free Delivery Min (Rs.)" value={draft.free_delivery_min} onChange={(v) => update("free_delivery_min", v)} type="number" placeholder="2500" />
-            <SettingRow label="Standard Delivery Fee (Rs.)" value={draft.delivery_fee} onChange={(v) => update("delivery_fee", v)} type="number" placeholder="350" />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Save button */}
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => setDraft({ ...settings })}>Reset</Button>
-        <Button onClick={saveAll} disabled={saving} className="gap-2">
-          <Save className="h-4 w-4" />
-          {saving ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
-    </div>
-  );
-};
+            <CardTitle className="text-base">Hero Banner Size</CardTitle>
+            <CardDescription>Controls the height of the main banner on the homepage</CardDescription>
+          </CardHeader

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import heroImg from "@/assets/hero-shopping.jpg";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 interface Banner {
   id: string;
@@ -27,6 +28,11 @@ const DEFAULT_BANNER: Banner = {
 export const HeroBanner = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [idx, setIdx] = useState(0);
+  const { settings } = useSiteSettings();
+  const bannerH = settings.banner_height || "600";
+  const bannerStyle = bannerH === "100vh"
+    ? { height: "100vh" }
+    : { height: `${bannerH}px` };
 
   useEffect(() => {
     supabase
@@ -63,7 +69,7 @@ export const HeroBanner = () => {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="relative w-full h-[480px] md:h-[600px] lg:h-[680px]">
+      <div className="relative w-full" style={bannerStyle}>
         <img
           key={b.id}
           src={b.imageUrl}
@@ -117,14 +123,4 @@ export const HeroBanner = () => {
                 <button
                   key={i}
                   onClick={() => setIdx(i)}
-                  className={`h-2 rounded-full transition-all ${i === idx ? "w-6 bg-primary" : "w-2 bg-background/60"}`}
-                  aria-label={`Banner ${i + 1}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-};
+                  className={`h-2 rounded-full tr

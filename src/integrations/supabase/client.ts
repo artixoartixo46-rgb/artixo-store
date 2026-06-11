@@ -2,8 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Project: artixo-store (dishanthandinho-dotcom's Org)
+const SUPABASE_URL = "https://qzhcxtqkdcygzadcttyf.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGN4dHFrZGN5Z3phZGN0dHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTAxODMsImV4cCI6MjA5MjIyNjE4M30.Brb46MYivYOs2aHreLDxUczXahPPZar_yQfXu-YOtp4";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

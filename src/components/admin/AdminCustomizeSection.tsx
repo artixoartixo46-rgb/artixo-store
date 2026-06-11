@@ -127,7 +127,7 @@ export const AdminCustomizeSection = () => {
                 <p className="font-semibold text-amber-900 text-sm">One-time database setup required</p>
                 <p className="text-xs text-amber-700 mt-1 mb-3">
                   Run this SQL once in your{" "}
-                  <a href="https://supabase.com/dashboard/project/djmrevzcetdpjzbggavj/sql/new"
+                  <a href="https://supabase.com/dashboard/project/qzhcxtqkdcygzadcttyf/sql/new"
                      target="_blank" rel="noopener noreferrer"
                      className="underline font-semibold">Supabase SQL Editor</a>{" "}
                   to enable persistent settings. Until then, changes apply live but won't be saved between sessions.

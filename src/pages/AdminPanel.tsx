@@ -317,14 +317,19 @@ const AdminPanel = () => {
     <SidebarProvider defaultOpen>
       <div className="flex min-h-screen w-full">
         <Sidebar collapsible="icon">
-          <SidebarHeader className="border-b border-sidebar-border">
+          {/* Bubble decorations */}
+          <div className="sidebar-bubble-1" />
+          <div className="sidebar-bubble-2" />
+          <div className="sidebar-bubble-3" />
+
+          <SidebarHeader className="border-b border-white/10">
             <Link to="/admin" className="flex items-center gap-2 px-2 py-3">
-              <div className="h-9 w-9 rounded-lg gradient-saffron flex items-center justify-center shrink-0">
+              <div className="h-9 w-9 rounded-xl gradient-saffron flex items-center justify-center shrink-0 shadow-lg" style={{boxShadow:"0 2px 12px rgba(255,180,0,0.4)"}}>
                 <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="group-data-[collapsible=icon]:hidden">
-                <div className="font-display font-bold text-sidebar-foreground">Artixo Admin</div>
-                <div className="text-xs text-sidebar-foreground/70">Control Center</div>
+                <div className="font-display font-bold text-white">Artixo Admin</div>
+                <div className="text-xs text-white/50">Control Center</div>
               </div>
             </Link>
           </SidebarHeader>

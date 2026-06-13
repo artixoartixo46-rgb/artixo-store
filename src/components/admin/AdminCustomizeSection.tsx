@@ -112,9 +112,14 @@ export const AdminCustomizeSection = () => {
 
   const saveAll = async () => {
     setSaving(true);
-    await save(draft);
-    setSaving(false);
-    toast.success("Settings saved! Changes are live.");
+    try {
+      await save(draft);
+      toast.success("Settings saved! Changes are live.");
+    } catch (err: any) {
+      toast.error(`Save failed: ${err?.message ?? "Unknown error"}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const copySQL = () => {

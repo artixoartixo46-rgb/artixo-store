@@ -313,6 +313,94 @@
    ADMIN SIDEBAR — Liquid Glass Style
 ═══════════════════════════════════════════════ */
 
+[data-sidebar="sidebar"] {
+  background: linear-gradient(
+    160deg,
+    rgba(100, 8, 38, 0.88) 0%,
+    rgba(60, 3, 22, 0.95) 50%,
+    rgba(80, 6, 30, 0.90) 100%
+  ) !important;
+  backdrop-filter: blur(28px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 4px 0 32px rgba(0,0,0,0.35), inset -1px 0 0 rgba(255,255,255,0.06) !important;
+}
+
+[data-sidebar="sidebar"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.07) 0%, transparent 45%),
+    radial-gradient(circle at 78% 12%, rgba(255,255,255,0.05) 0%, transparent 38%),
+    radial-gradient(circle at 35% 65%, rgba(255,255,255,0.04) 0%, transparent 42%),
+    radial-gradient(circle at 88% 58%, rgba(255,255,255,0.05) 0%, transparent 32%),
+    radial-gradient(circle at 12% 88%, rgba(255,255,255,0.04) 0%, transparent 38%),
+    radial-gradient(circle at 65% 88%, rgba(255,255,255,0.04) 0%, transparent 30%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-sidebar="header"],
+[data-sidebar="content"],
+[data-sidebar="footer"],
+[data-sidebar="group"],
+[data-sidebar="group-label"] {
+  position: relative;
+  z-index: 1;
+}
+
+[data-sidebar="group-label"] {
+  color: rgba(255, 255, 255, 0.40) !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+[data-sidebar="menu-button"] {
+  border-radius: 9999px !important;
+  padding: 0.55rem 0.85rem !important;
+  height: auto !important;
+  min-height: 2.5rem !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+}
+
+[data-sidebar="menu-button"]:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-sidebar="menu-button"][data-active="true"] {
+  background: linear-gradient(135deg, rgba(175,25,72,0.92) 0%, rgba(215,45,95,0.82) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  box-shadow: 0 2px 16px rgba(175,25,72,0.50), inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.12) !important;
+}
+
+.sidebar-bubble-1,
+.sidebar-bubble-2,
+.sidebar-bubble-3 {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  pointer-events: none;
+  z-index: 0;
+}
+.sidebar-bubble-1 { width: 14px; height: 14px; right: 10px; top: 40%; }
+.sidebar-bubble-2 { width: 9px;  height: 9px;  right: 8px;  top: 53%; }
+.sidebar-bubble-3 { width: 11px; height: 11px; right: 15px; top: 66%; }
+
+/* ═══════════════════════════════════════════════
+   ADMIN SIDEBAR — Liquid Glass Style
+═══════════════════════════════════════════════ */
+
 /* Sidebar container — deep maroon glass */
 [data-sidebar="sidebar"] {
   background: linear-gradient(

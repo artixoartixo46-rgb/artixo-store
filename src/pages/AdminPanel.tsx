@@ -316,11 +316,7 @@ const AdminPanel = () => {
   return (
     <SidebarProvider defaultOpen>
       <div className="flex min-h-screen w-full">
-        <Sidebar collapsible="icon">
-          {/* Bubble decorations */}
-          <div className="sidebar-bubble-1" />
-          <div className="sidebar-bubble-2" />
-          <div className="sidebar-bubble-3" />
+        <Sidebar collapsible="icon" className="relative overflow-hidden">
 
           <SidebarHeader className="border-b border-white/10">
             <Link to="/admin" className="flex items-center gap-2 px-2 py-3">

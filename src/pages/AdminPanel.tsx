@@ -323,7 +323,7 @@ const AdminPanel = () => {
                 <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="group-data-[collapsible=icon]:hidden">
-                <div className="font-display font-bold text-sidebar-foreground">Lanka Admin</div>
+                <div className="font-display font-bold text-sidebar-foreground">Artixo Admin</div>
                 <div className="text-xs text-sidebar-foreground/70">Control Center</div>
               </div>
             </Link>

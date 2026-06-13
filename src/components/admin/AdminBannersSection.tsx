@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, Image as ImageIcon, Upload, Film } from "lucide-react";
@@ -202,45 +201,42 @@ export const AdminBannersSection = () => {
           No banners yet. Add one to customize the homepage hero.
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Preview</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {banners.map((b) => (
-              <TableRow key={b.id}>
-                <TableCell>
-                  <div className="relative h-12 w-20 rounded bg-muted overflow-hidden">
-                    <img src={b.image_url} alt={b.title ?? ""} className="h-full w-full object-cover" />
-                    {isAnimatedBanner(b.image_url) && (
-                      <span className="absolute bottom-0 left-0 bg-black/70 text-white text-[9px] px-1 rounded-tr flex items-center gap-0.5">
-                        <Film className="h-2.5 w-2.5" /> GIF
-                      </span>
-                    )}
+        <div className="divide-y">
+          {banners.map((b) => (
+            <div key={b.id} className="p-4 space-y-3">
+              {/* Full-width banner preview */}
+              <div className="relative w-full rounded-xl overflow-hidden bg-muted" style={{ aspectRatio: "16/5" }}>
+                <img src={b.image_url} alt={b.title ?? ""} className="w-full h-full object-cover" />
+                {isAnimatedBanner(b.image_url) && (
+                  <span className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Film className="h-3 w-3" /> Animated
+                  </span>
+                )}
+                {!b.is_active && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <span className="bg-black/70 text-white text-sm px-3 py-1 rounded-full">Inactive</span>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{b.title ?? "—"}</div>
-                  <div className="text-xs text-muted-foreground line-clamp-1 max-w-[280px]">{b.subtitle}</div>
-                </TableCell>
-                <TableCell>{b.display_order}</TableCell>
-                <TableCell><Switch checked={b.is_active} onCheckedChange={() => toggleActive(b)} /></TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openEdit(b)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(b.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                )}
+              </div>
+              {/* Meta row */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate">{b.title || <span className="text-muted-foreground italic">No title</span>}</p>
+                  {b.subtitle && <p className="text-xs text-muted-foreground line-clamp-1">{b.subtitle}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">Order: {b.display_order}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <Switch checked={b.is_active} onCheckedChange={() => toggleActive(b)} />
+                    <span className="text-xs text-muted-foreground">{b.is_active ? "Active" : "Off"}</span>
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  <Button size="sm" variant="outline" onClick={() => openEdit(b)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="sm" variant="ghost" onClick={() => remove(b.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </Card>
   );

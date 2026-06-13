@@ -154,9 +154,11 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
     const next = { ...settings, ...updates };
     setSettings(next);
     applyCSSVars(next);
-    if (!dbReady) return;
-    const rows = Object.entries(updates).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
-    await (supabase as any).from("site_settings").upsert(rows, { onConflict: "key" });
+    try {
+      const rows = Object.entries(updates).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
+      const { error } = await (supabase as any).from("site_settings").upsert(rows, { onConflict: "key" });
+      if (!error) setDbReady(true);
+    } catch { /* silent */ }
   };
 
   useEffect(() => { load(); }, []);

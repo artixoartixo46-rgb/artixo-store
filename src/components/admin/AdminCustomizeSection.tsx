@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSiteSettings, DEFAULT_SETTINGS, SiteSettings } from "@/hooks/useSiteSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,7 +93,16 @@ const SectionTitle = ({ title, desc }: { title: string; desc: string }) => (
 export const AdminCustomizeSection = () => {
   const { settings, dbReady, save } = useSiteSettings();
   const [draft, setDraft] = useState<SiteSettings>({ ...settings });
+  const [draftInitialized, setDraftInitialized] = useState(dbReady);
   const [saving, setSaving] = useState(false);
+
+  // Sync draft when DB loads for the first time (avoids overwriting defaults with stale form)
+  useEffect(() => {
+    if (dbReady && !draftInitialized) {
+      setDraft({ ...settings });
+      setDraftInitialized(true);
+    }
+  }, [dbReady, settings, draftInitialized]);
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "banner" | "sections" | "social" | "delivery">("identity");
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -258,20 +267,19 @@ export const AdminCustomizeSection = () => {
               <Field label="Support Phone" value={draft.support_phone} onChange={(v) => update("support_phone", v)} placeholder="+94 11 000 0000" />
               <Field label="Address" value={draft.address} onChange={(v) => update("address", v)} placeholder="Colombo, Sri Lanka" />
 
-              <div className="mt-2 pt-4 border-t border-white/10">
-                <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Site Logo</p>
+              <div className="mt-2 pt-4 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Site Logo</p>
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center bg-white/5 shrink-0 overflow-hidden">
+                  <div className="h-16 w-16 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50 shrink-0 overflow-hidden">
                     {draft.site_logo
                       ? <img src={draft.site_logo} alt="Logo" className="h-full w-full object-contain p-1" />
-                      : <ImageIcon className="h-6 w-6 text-white/30" />}
+                      : <ImageIcon className="h-6 w-6 text-gray-300" />}
                   </div>
                   <div className="flex-1 space-y-2">
                     <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
                     <button
                       onClick={() => logoInputRef.current?.click()}
-                      className="flex items-center justify-center gap-1.5 w-full h-9 rounded-2xl text-sm font-medium text-white transition-all"
-                      style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}
+                      className="flex items-center justify-center gap-1.5 w-full h-9 rounded-xl text-sm font-medium text-gray-700 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-all"
                     >
                       <Upload className="h-3.5 w-3.5" /> Upload Image (max 500 KB)
                     </button>
@@ -279,15 +287,15 @@ export const AdminCustomizeSection = () => {
                       value={draft.site_logo.startsWith("data:") ? "" : draft.site_logo}
                       onChange={(e) => update("site_logo", e.target.value)}
                       placeholder="Or paste image URL…"
-                      className="w-full h-9 rounded-2xl bg-white/10 border border-white/15 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/60 transition-all"
+                      className="w-full h-9 rounded-xl bg-gray-50 border border-gray-200 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
                     />
                     {draft.site_logo && (
                       <button onClick={() => update("site_logo", "")}
-                        className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300">
+                        className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600">
                         <X className="h-3 w-3" /> Remove logo
                       </button>
                     )}
-                    <p className="text-xs text-white/30">PNG or SVG recommended.</p>
+                    <p className="text-xs text-gray-400">PNG or SVG recommended.</p>
                   </div>
                 </div>
               </div>
@@ -318,12 +326,12 @@ export const AdminCustomizeSection = () => {
                 <Field label="Message" value={draft.announcement_text} onChange={(v) => update("announcement_text", v)} placeholder="🎉 Free delivery on orders over Rs. 2,500!" />
                 <Field label="Link (optional)" value={draft.announcement_link} onChange={(v) => update("announcement_link", v)} placeholder="/products" />
                 <div className="flex items-center gap-3">
-                  <p className="text-sm text-white/70 flex-1">Bar Background Color</p>
+                  <p className="text-sm text-gray-700 flex-1">Bar Background Color</p>
                   <input
                     type="color"
                     value={draft.announcement_bg}
                     onChange={(e) => update("announcement_bg", e.target.value)}
-                    className="h-10 w-14 rounded-xl border border-white/20 cursor-pointer p-0.5 bg-transparent"
+                    className="h-10 w-14 rounded-xl border border-gray-200 cursor-pointer p-0.5 bg-transparent"
                   />
                 </div>
               </div>
@@ -347,8 +355,8 @@ export const AdminCustomizeSection = () => {
                     className="py-2.5 rounded-2xl text-sm font-medium transition-all"
                     style={
                       draft.banner_height === p.value
-                        ? { background: "rgba(141,21,58,0.8)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }
-                        : { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }
+                        ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                        : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }
                     }
                   >
                     {p.label}

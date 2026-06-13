@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import {
   Plus, Edit, Trash2, Upload, Search, Package, FileSpreadsheet, Download,
+  Sparkles, Loader2,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 
@@ -53,6 +54,8 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<{ ok: number; fail: number; errors: string[] } | null>(null);
   const [newColorName, setNewColorName] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiFilledFields, setAiFilledFields] = useState<string[]>([]);
 
   const refresh = async () => {
     const { data, error } = await supabase
@@ -70,7 +73,7 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
     refresh();
   }, []);
 
-  const openNew = () => { setEditing(null); setForm(emptyForm); setOpen(true); };
+  const openNew = () => { setEditing(null); setForm(emptyForm); setAiFilledFields([]); setOpen(true); };
 
   const openEdit = (p: ProductRow) => {
     setEditing(p);
@@ -134,6 +137,8 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
         images: [...f.images, ...urls],
       }));
       toast.success(`${urls.length} image(s) uploaded`);
+      // Auto AI-fill on first upload when adding a new product
+      if (!editing && files[0]) analyzeWithGemini(files[0]);
     }
     setUploading(false);
     e.target.value = "";
@@ -195,6 +200,81 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
     toast.success("Video uploaded!");
     setUploading(false);
     e.target.value = "";
+  };
+
+  const analyzeWithGemini = async (file: File) => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      toast.error("Set VITE_GEMINI_API_KEY in .env to enable AI auto-fill");
+      return;
+    }
+    setAiLoading(true);
+    setAiFilledFields([]);
+    const loadingId = toast.loading("🤖 AI analyzing product photo…");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inline_data: { mime_type: file.type || "image/jpeg", data: base64 } },
+                { text: `You are a Sri Lankan e-commerce product analyst. Analyze this product image and return ONLY a JSON object with these exact keys (no markdown, no explanation):
+{
+  "name": "Specific product name in English (e.g. Men's Slim Fit Denim Jacket - Dark Blue)",
+  "brand": "Brand name if visible on packaging/label, else empty string",
+  "sku": "Short auto-generated SKU in uppercase (e.g. JACK-DNM-001)",
+  "description": "2–3 sentence e-commerce product description highlighting key features and benefits",
+  "category": "Exactly one of: Electronics, Clothing, Footwear, Accessories, Home & Kitchen, Beauty, Sports, Books, Toys, Food & Beverages, Other"
+}` },
+              ]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 600 },
+          }),
+        }
+      );
+      if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+      const data = await res.json();
+      const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Could not parse AI response");
+      const ai = JSON.parse(jsonMatch[0]) as Record<string, string>;
+      const filled: string[] = [];
+      setForm((f) => {
+        const next = { ...f };
+        if (!f.name && ai.name)        { next.name = ai.name;               filled.push("name"); }
+        if (!f.brand && ai.brand)      { next.brand = ai.brand;             filled.push("brand"); }
+        if (!f.sku && ai.sku)          { next.sku = ai.sku;                 filled.push("sku"); }
+        if (!f.description && ai.description) { next.description = ai.description; filled.push("description"); }
+        return next;
+      });
+      if (ai.category) {
+        const match = categories.find((c) =>
+          c.name.toLowerCase().includes(ai.category.toLowerCase()) ||
+          ai.category.toLowerCase().includes(c.name.toLowerCase())
+        );
+        if (match) {
+          setForm((f) => f.category_id ? f : { ...f, category_id: match.id });
+          filled.push("category");
+        }
+      }
+      setAiFilledFields(filled);
+      toast.dismiss(loadingId);
+      toast.success(`✨ AI filled: ${filled.join(", ") || "no new fields"}`);
+    } catch (err: any) {
+      toast.dismiss(loadingId);
+      toast.error(`AI failed: ${err.message}`);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const save = async (e: React.FormEvent) => {
@@ -402,12 +482,50 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
           <form onSubmit={save} className="space-y-4">
-            <div><Label>Product Name *</Label><Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Brand</Label><Input maxLength={60} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} /></div>
-              <div><Label>SKU</Label><Input maxLength={60} value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} /></div>
+            {/* AI status banner */}
+            {aiLoading && (
+              <div className="flex items-center gap-2 rounded-xl bg-violet-50 border border-violet-200 px-3 py-2 text-sm text-violet-700">
+                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                <span>AI is analyzing your product photo and filling in the details…</span>
+              </div>
+            )}
+            {!aiLoading && aiFilledFields.length > 0 && (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span>AI filled: <span className="font-medium">{aiFilledFields.join(", ")}</span>. Review and adjust before saving.</span>
+              </div>
+            )}
+
+            <div>
+              <Label>Product Name *</Label>
+              <div className="relative">
+                <Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={aiFilledFields.includes("name") ? "border-violet-300 bg-violet-50/40" : ""} />
+                {aiFilledFields.includes("name") && <Sparkles className="absolute right-3 top-2.5 h-3.5 w-3.5 text-violet-400" />}
+              </div>
             </div>
-            <div><Label>Description</Label><Textarea rows={3} maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Brand</Label>
+                <div className="relative">
+                  <Input maxLength={60} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} className={aiFilledFields.includes("brand") ? "border-violet-300 bg-violet-50/40" : ""} />
+                  {aiFilledFields.includes("brand") && <Sparkles className="absolute right-3 top-2.5 h-3.5 w-3.5 text-violet-400" />}
+                </div>
+              </div>
+              <div>
+                <Label>SKU</Label>
+                <div className="relative">
+                  <Input maxLength={60} value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} className={aiFilledFields.includes("sku") ? "border-violet-300 bg-violet-50/40" : ""} />
+                  {aiFilledFields.includes("sku") && <Sparkles className="absolute right-3 top-2.5 h-3.5 w-3.5 text-violet-400" />}
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Description</Label>
+              <div className="relative">
+                <Textarea rows={3} maxLength={2000} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={aiFilledFields.includes("description") ? "border-violet-300 bg-violet-50/40" : ""} />
+                {aiFilledFields.includes("description") && <Sparkles className="absolute right-3 top-2.5 h-3.5 w-3.5 text-violet-400" />}
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-3">
               <div><Label>Selling Price *</Label><Input required type="number" min="0" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
               <div><Label>Original Price</Label><Input type="number" min="0" step="0.01" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
@@ -512,7 +630,31 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
             </div>
 
             <div className="space-y-2">
-              <Label>Product Images (multiple allowed)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Product Images (multiple allowed)</Label>
+                {form.images.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={aiLoading || uploading}
+                    onClick={async () => {
+                      // Fetch the first image as a blob and re-analyze
+                      try {
+                        setAiFilledFields([]);
+                        const res = await fetch(form.images[0]);
+                        const blob = await res.blob();
+                        const file = new File([blob], "product.jpg", { type: blob.type || "image/jpeg" });
+                        await analyzeWithGemini(file);
+                      } catch { toast.error("Could not fetch image for re-analysis"); }
+                    }}
+                    className="h-7 text-xs gap-1.5 text-violet-600 border-violet-200 hover:bg-violet-50"
+                  >
+                    {aiLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    Re-analyze with AI
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {form.images.map((url) => (
                   <div key={url} className="relative group">

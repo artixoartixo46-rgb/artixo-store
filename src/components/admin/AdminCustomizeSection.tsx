@@ -34,14 +34,14 @@ ON CONFLICT (key) DO NOTHING;`;
 const Toggle = ({ label, value, onChange, description }: {
   label: string; value: boolean; onChange: (v: boolean) => void; description?: string;
 }) => (
-  <div className="flex items-center justify-between py-3 border-b border-white/10 last:border-0">
+  <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
     <div>
-      <p className="text-sm font-medium text-white">{label}</p>
-      {description && <p className="text-xs text-white/50 mt-0.5">{description}</p>}
+      <p className="text-sm font-medium text-gray-800">{label}</p>
+      {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
     </div>
     <button
       onClick={() => onChange(!value)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-primary" : "bg-white/20"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors ${value ? "bg-primary" : "bg-gray-200"}`}
     >
       <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${value ? "translate-x-5" : ""}`} />
     </button>
@@ -52,13 +52,13 @@ const Field = ({ label, value, onChange, type = "text", placeholder }: {
   label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
 }) => (
   <div className="space-y-1.5 mb-4">
-    <label className="text-xs font-semibold text-white/60 uppercase tracking-wider">{label}</label>
+    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{label}</label>
     <input
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full h-10 rounded-2xl bg-white/10 border border-white/15 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/60 focus:bg-white/15 transition-all"
+      className="w-full h-10 rounded-xl bg-gray-50 border border-gray-200 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all"
     />
   </div>
 );
@@ -66,18 +66,18 @@ const Field = ({ label, value, onChange, type = "text", placeholder }: {
 const ColorField = ({ label, value, onChange }: {
   label: string; value: string; onChange: (v: string) => void;
 }) => (
-  <div className="flex items-center justify-between py-3 border-b border-white/10 last:border-0">
+  <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
     <div>
-      <p className="text-sm font-medium text-white">{label}</p>
-      <p className="text-xs text-white/40 font-mono">{value}</p>
+      <p className="text-sm font-medium text-gray-800">{label}</p>
+      <p className="text-xs text-gray-400 font-mono">{value}</p>
     </div>
     <div className="flex items-center gap-2">
-      <div className="h-8 w-8 rounded-xl border-2 border-white/20 shadow-lg" style={{ background: value }} />
+      <div className="h-8 w-8 rounded-xl border-2 border-gray-200 shadow-sm" style={{ background: value }} />
       <input
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-9 rounded-xl border border-white/20 cursor-pointer bg-transparent p-0.5"
+        className="h-9 w-9 rounded-xl border border-gray-200 cursor-pointer bg-transparent p-0.5"
       />
     </div>
   </div>
@@ -85,8 +85,8 @@ const ColorField = ({ label, value, onChange }: {
 
 const SectionTitle = ({ title, desc }: { title: string; desc: string }) => (
   <div className="mb-5">
-    <h3 className="text-base font-bold text-white">{title}</h3>
-    <p className="text-xs text-white/50 mt-0.5">{desc}</p>
+    <h3 className="text-base font-bold text-gray-900">{title}</h3>
+    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
   </div>
 );
 
@@ -212,31 +212,24 @@ export const AdminCustomizeSection = () => {
 
         {/* DB warning */}
         {!dbReady && (
-          <div
-            className="rounded-2xl p-4"
-            style={{
-              background: "rgba(180,120,0,0.15)",
-              border: "1px solid rgba(255,200,0,0.25)",
-              backdropFilter: "blur(12px)",
-            }}
-          >
+          <div className="rounded-2xl p-4 bg-amber-50 border border-amber-200">
             <div className="flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-yellow-200 text-sm">One-time database setup needed</p>
-                <p className="text-xs text-yellow-300/70 mt-1 mb-3">
+                <p className="font-semibold text-amber-900 text-sm">One-time database setup needed</p>
+                <p className="text-xs text-amber-700 mt-1 mb-3">
                   Run this SQL in your{" "}
                   <a href="https://supabase.com/dashboard/project/djmrevzcetdpjzbggavj/sql/new"
                     target="_blank" rel="noopener noreferrer"
-                    className="underline font-semibold text-yellow-200">Supabase SQL Editor</a>
+                    className="underline font-semibold text-amber-900">Supabase SQL Editor</a>
                   {" "}to save settings permanently.
                 </p>
-                <pre className="text-[10px] bg-black/30 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap text-yellow-100/80 max-h-28">
+                <pre className="text-[10px] bg-amber-100 rounded-xl p-3 overflow-x-auto whitespace-pre-wrap text-amber-900 max-h-28">
                   {SETUP_SQL}
                 </pre>
                 <button
                   onClick={copySQL}
-                  className="mt-2 flex items-center gap-1.5 text-xs font-medium text-yellow-200 hover:text-white transition-colors"
+                  className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-800 hover:text-amber-900 transition-colors"
                 >
                   {copied ? <><CheckCircle2 className="h-3.5 w-3.5" /> Copied!</> : <><Copy className="h-3.5 w-3.5" /> Copy SQL</>}
                 </button>
@@ -246,24 +239,14 @@ export const AdminCustomizeSection = () => {
         )}
 
         {dbReady && (
-          <div className="flex items-center gap-2 text-sm text-green-300 rounded-2xl px-4 py-2.5"
-            style={{ background: "rgba(0,180,80,0.12)", border: "1px solid rgba(0,220,100,0.2)" }}>
-            <CheckCircle2 className="h-4 w-4 text-green-400" />
+          <div className="flex items-center gap-2 text-sm text-green-700 rounded-2xl px-4 py-2.5 bg-green-50 border border-green-200">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
             Database connected — settings sync live.
           </div>
         )}
 
         {/* Content card */}
-        <div
-          className="flex-1 rounded-3xl p-5"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1.5px solid rgba(255,255,255,0.1)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)",
-          }}
-        >
+        <div className="flex-1 rounded-3xl p-5 bg-white border border-gray-200 shadow-sm">
 
           {/* ── Site Info ── */}
           {tab === "identity" && (
@@ -404,8 +387,8 @@ export const AdminCustomizeSection = () => {
               <SectionTitle title="Delivery Settings" desc="Shipping fees shown at checkout" />
               <Field label="Free Delivery Minimum (Rs.)" value={draft.free_delivery_min} onChange={(v) => update("free_delivery_min", v)} placeholder="2500" type="number" />
               <Field label="Standard Delivery Fee (Rs.)" value={draft.delivery_fee} onChange={(v) => update("delivery_fee", v)} placeholder="350" type="number" />
-              <div className="mt-4 p-4 rounded-2xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <p className="text-xs text-white/50">Orders above <span className="text-white font-semibold">Rs. {draft.free_delivery_min}</span> get free delivery. Others pay <span className="text-white font-semibold">Rs. {draft.delivery_fee}</span>.</p>
+              <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                <p className="text-xs text-gray-600">Orders above <span className="text-gray-900 font-semibold">Rs. {draft.free_delivery_min}</span> get free delivery. Others pay <span className="text-gray-900 font-semibold">Rs. {draft.delivery_fee}</span>.</p>
               </div>
             </>
           )}

@@ -241,7 +241,10 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
           }),
         }
       );
-      if (!res.ok) throw new Error(`Gemini error ${res.status}`);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(`${res.status}: ${errBody?.error?.message || res.statusText}`);
+      }
       const data = await res.json();
       const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);

@@ -218,16 +218,11 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: file.type || "image/jpeg", data: base64 } },
-                { text: `You are a Sri Lankan e-commerce product analyst. Analyze this product image and return ONLY a JSON object with these exact keys (no markdown, no explanation):
+      const geminiBody = JSON.stringify({
+        contents: [{
+          parts: [
+            { inline_data: { mime_type: file.type || "image/jpeg", data: base64 } },
+            { text: `You are a Sri Lankan e-commerce product analyst. Analyze this product image and return ONLY a JSON object with these exact keys (no markdown, no explanation):
 {
   "name": "Specific product name in English (e.g. Men's Slim Fit Denim Jacket - Dark Blue)",
   "brand": "Brand name if visible on packaging/label, else empty string",
@@ -235,12 +230,22 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
   "description": "2–3 sentence e-commerce product description highlighting key features and benefits",
   "category": "Exactly one of: Electronics, Clothing, Footwear, Accessories, Home & Kitchen, Beauty, Sports, Books, Toys, Food & Beverages, Other"
 }` },
-              ]
-            }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 600 },
-          }),
-        }
+          ]
+        }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 600 },
+      });
+      const callGemini = () => fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: geminiBody }
       );
+      let res = await callGemini();
+      if (res.status === 429) {
+        toast.dismiss(loadingId);
+        const retryId = toast.loading("⏳ Rate limited — retrying in 5s…");
+        await new Promise(r => setTimeout(r, 5000));
+        toast.dismiss(retryId);
+        res = await callGemini();
+      }
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(`${res.status}: ${errBody?.error?.message || res.statusText}`);

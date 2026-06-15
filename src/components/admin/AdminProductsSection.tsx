@@ -235,7 +235,7 @@ export const AdminProductsSection = ({ adminUserId }: { adminUserId: string }) =
         generationConfig: { temperature: 0.1, maxOutputTokens: 600 },
       });
       const callGemini = () => fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
         { method: "POST", headers: { "Content-Type": "application/json" }, body: geminiBody }
       );
       let res = await callGemini();

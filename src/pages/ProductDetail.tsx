@@ -24,6 +24,7 @@ import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
 import { ProductCard } from "@/components/ProductCard";
 import { ReviewSection, useProductRating } from "@/components/ReviewSection";
+import { ProductQA } from "@/components/ProductQA";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ZoomIn } from "lucide-react";
@@ -529,6 +530,8 @@ const ProductDetail = () => {
         </div>
 
         <ReviewSection productId={product.id} productName={product.name} />
+
+        <ProductQA productId={product.id} sellerId={product.sellerProfile?.sellerId} />
 
         {related.length > 0 && (
           <div className="mt-8">

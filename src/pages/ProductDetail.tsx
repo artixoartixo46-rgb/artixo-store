@@ -24,6 +24,7 @@ import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
 import { ProductCard } from "@/components/ProductCard";
 import { ReviewSection, useProductRating } from "@/components/ReviewSection";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { toast } from "sonner";
 
 const ProductDetail = () => {
@@ -77,15 +78,19 @@ const ProductDetail = () => {
       }
 
       // Load seller profile
-      let sellerProfile: { fullName: string | null; shopName: string | null } | null = null;
+      let sellerProfile: { fullName: string | null; shopName: string | null; isVerified: boolean } | null = null;
       if (data.seller_id) {
-        const { data: sData } = await supabase
+        const { data: sData } = await (supabase as any)
           .from("profiles")
-          .select("full_name, shop_name")
+          .select("full_name, shop_name, is_verified")
           .eq("id", data.seller_id)
           .single();
         if (sData) {
-          sellerProfile = { fullName: (sData as any).full_name ?? null, shopName: (sData as any).shop_name ?? null };
+          sellerProfile = {
+            fullName: sData.full_name ?? null,
+            shopName: sData.shop_name ?? null,
+            isVerified: sData.is_verified ?? false,
+          };
         }
       }
 
@@ -452,8 +457,9 @@ const ProductDetail = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-muted-foreground">Sold by</div>
-                  <div className="font-semibold truncate">
-                    {product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}
+                  <div className="font-semibold truncate flex items-center gap-1.5">
+                    <span className="truncate">{product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}</span>
+                    {product.sellerProfile?.isVerified && <VerifiedBadge size="sm" />}
                   </div>
                 </div>
               </div>
@@ -490,20 +496,4 @@ const ProductDetail = () => {
 
       {product.stock > 0 && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-3 flex gap-2 z-50 shadow-lg">
-          <Button variant="outline" className="flex-1" onClick={() => add(product.id, qty)}>
-            <ShoppingCart className="h-4 w-4 mr-1" /> Cart
-          </Button>
-          <Button variant="hero" className="flex-1" onClick={handleBuyNow}>
-            <Zap className="h-4 w-4 mr-1" /> Buy Now
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default ProductDetail;
-
-
-
-
+          <Button variant="outline" className="flex-1" onClick={() => add(produc

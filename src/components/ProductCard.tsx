@@ -8,6 +8,7 @@ import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useProductRating } from "@/components/ReviewSection";
+import { VerifiedBadge, useSellerVerified } from "@/components/VerifiedBadge";
 
 export interface ProductCardData {
   id: string;
@@ -17,6 +18,7 @@ export interface ProductCardData {
   stock: number;
   is_trending?: boolean;
   original_price?: number | null;
+  seller_id?: string | null;
 }
 
 export const ProductCard = ({ p }: { p: ProductCardData }) => {
@@ -25,6 +27,7 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const { avg, count } = useProductRating(p.id);
+  const isVerified = useSellerVerified(p.seller_id);
 
   const hasDiscount = p.original_price && Number(p.original_price) > Number(p.price);
   const discountPct = hasDiscount
@@ -73,8 +76,9 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
       </Link>
       <div className="p-3 space-y-2">
         <Link to={`/product/${p.id}`}>
-          <h3 className="font-medium line-clamp-2 text-sm min-h-[2.5rem] hover:text-primary transition-smooth">
-            {p.name}
+          <h3 className="font-medium line-clamp-2 text-sm min-h-[2.5rem] hover:text-primary transition-smooth flex items-start gap-1">
+            <span>{p.name}</span>
+            {isVerified && <VerifiedBadge size="sm" className="shrink-0 mt-0.5" />}
           </h3>
         </Link>
         {avg !== null && count > 0 && (

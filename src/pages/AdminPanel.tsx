@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 import {
   Package, Check, X, Shield, LayoutDashboard, ShoppingBag, Users, ClipboardList,
-  TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush,
+  TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush, BadgeCheck,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { AdminProductsSection } from "@/components/admin/AdminProductsSection";
@@ -26,6 +26,8 @@ import { AdminCustomizeSection } from "@/components/admin/AdminCustomizeSection"
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileDown } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 const generateReceiptPDF = (order: any) => {
   const doc = new jsPDF();
@@ -85,7 +87,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -94,6 +96,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "orders", label: "Orders", icon: Package },
   { key: "banners", label: "Banners", icon: ImageIcon },
   { key: "sellers", label: "Sellers", icon: Users },
+  { key: "verifications", label: "Verifications", icon: BadgeCheck },
   { key: "returns", label: "Returns", icon: RotateCcw },
   { key: "customize", label: "Customize Site", icon: Paintbrush },
 ];
@@ -107,6 +110,8 @@ const AdminPanel = () => {
   const [sellers, setSellers] = useState<any[]>([]);
   const [pendingSellers, setPendingSellers] = useState<any[]>([]);
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
+  const [verifRequests, setVerifRequests] = useState<any[]>([]);
+  const [adminNoteMap, setAdminNoteMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [addSellerEmail, setAddSellerEmail] = useState("");
   const [addingsel, setAddingsel] = useState(false);
@@ -189,6 +194,19 @@ const AdminPanel = () => {
     setAllProducts(productList);
     setOrders(orderList);
     setSellers(sellerList);
+
+    // Load verification requests
+    const { data: vrData } = await (supabase as any)
+      .from("verification_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+    const vrList = (vrData ?? []).map((vr: any) => ({
+      ...vr,
+      sellerName: usersMap[vr.seller_id]?.full_name ?? "—",
+      sellerEmail: usersMap[vr.seller_id]?.email ?? "—",
+      shopName: usersMap[vr.seller_id]?.shop_name ?? "—",
+    }));
+    setVerifRequests(vrList);
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
@@ -211,6 +229,34 @@ const AdminPanel = () => {
       .eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Return request ${status}.`);
+    refresh();
+  };
+
+  const reviewVerif = async (vr: any, action: "approved" | "rejected") => {
+    const adminNote = adminNoteMap[vr.id] ?? "";
+    // Update request status
+    const { error: vrErr } = await (supabase as any)
+      .from("verification_requests")
+      .update({ status: action, admin_notes: adminNote, reviewed_by: user?.id, updated_at: new Date().toISOString() })
+      .eq("id", vr.id);
+    if (vrErr) { toast.error(vrErr.message); return; }
+
+    if (action === "approved") {
+      // Grant is_verified on profiles
+      const { error: pErr } = await (supabase as any)
+        .from("profiles")
+        .update({ is_verified: true })
+        .eq("id", vr.seller_id);
+      if (pErr) { toast.error(pErr.message); return; }
+    } else {
+      // Revoke verification if re-rejecting
+      await (supabase as any)
+        .from("profiles")
+        .update({ is_verified: false })
+        .eq("id", vr.seller_id);
+    }
+
+    toast.success(`Verification ${action} for ${vr.sellerName || vr.sellerEmail}`);
     refresh();
   };
 
@@ -345,6 +391,9 @@ const AdminPanel = () => {
                         )}
                         {item.key === "returns" && returnRequests.filter((r) => r.status === "pending").length > 0 && (
                           <Badge className="ml-auto h-5 px-1.5 bg-red-500 text-white">{returnRequests.filter((r) => r.status === "pending").length}</Badge>
+                        )}
+                        {item.key === "verifications" && verifRequests.filter((r) => r.status === "pending").length > 0 && (
+                          <Badge className="ml-auto h-5 px-1.5 bg-blue-500 text-white">{verifRequests.filter((r) => r.status === "pending").length}</Badge>
                         )}
                         {item.key === "pending" && pending.length > 0 && (
                           <Badge className="ml-auto h-5 px-1.5 bg-primary text-primary-foreground">{pending.length}</Badge>
@@ -662,6 +711,89 @@ const AdminPanel = () => {
                     </TableBody>
                   </Table>
                 </Card>
+              </div>
+            )}
+
+            {section === "verifications" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <BadgeCheck className="h-5 w-5 text-blue-500" /> Seller Verification Requests
+                  </h2>
+                  <div className="flex gap-2 text-xs text-muted-foreground">
+                    <span className="bg-yellow-100 text-yellow-700 rounded px-2 py-0.5 font-medium">
+                      {verifRequests.filter((r) => r.status === "pending").length} pending
+                    </span>
+                    <span className="bg-green-100 text-green-700 rounded px-2 py-0.5 font-medium">
+                      {verifRequests.filter((r) => r.status === "approved").length} approved
+                    </span>
+                  </div>
+                </div>
+                {verifRequests.length === 0 ? (
+                  <Card className="p-12 text-center text-muted-foreground">
+                    <BadgeCheck className="h-10 w-10 mx-auto mb-2 text-blue-400" />
+                    No verification requests yet.
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {verifRequests.map((vr) => (
+                      <Card key={vr.id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{vr.sellerName}</span>
+                              {vr.status === "approved" && <VerifiedBadge size="sm" />}
+                              {vr.status === "pending" && <Badge className="bg-yellow-100 text-yellow-700 text-xs">Pending</Badge>}
+                              {vr.status === "approved" && <Badge className="bg-green-100 text-green-700 text-xs">Approved</Badge>}
+                              {vr.status === "rejected" && <Badge className="bg-red-100 text-red-700 text-xs">Rejected</Badge>}
+                            </div>
+                            <div className="text-sm text-muted-foreground">{vr.sellerEmail}</div>
+                          </div>
+                          <div className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(vr.created_at).toLocaleDateString("en-LK")}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                          <div><span className="text-muted-foreground text-xs">Business</span><div className="font-medium">{vr.business_name}</div></div>
+                          <div><span className="text-muted-foreground text-xs">Type</span><div className="font-medium">{vr.business_type}</div></div>
+                          <div><span className="text-muted-foreground text-xs">Phone</span><div className="font-medium">{vr.phone}</div></div>
+                          {vr.notes && (
+                            <div className="col-span-full"><span className="text-muted-foreground text-xs">Notes</span><div className="font-medium">{vr.notes}</div></div>
+                          )}
+                          {vr.admin_notes && (
+                            <div className="col-span-full"><span className="text-muted-foreground text-xs">Admin Notes</span><div className="font-medium text-muted-foreground">{vr.admin_notes}</div></div>
+                          )}
+                        </div>
+                        {vr.status === "pending" && (
+                          <div className="space-y-2 pt-1 border-t">
+                            <Textarea
+                              rows={1}
+                              placeholder="Admin note (optional, shown to seller on rejection)"
+                              value={adminNoteMap[vr.id] ?? ""}
+                              onChange={(e) => setAdminNoteMap((m) => ({ ...m, [vr.id]: e.target.value }))}
+                              className="text-sm"
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="success" onClick={() => reviewVerif(vr, "approved")}>
+                                <Check className="h-3 w-3 mr-1" /> Approve & Verify
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => reviewVerif(vr, "rejected")}>
+                                <X className="h-3 w-3 mr-1" /> Reject
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        {vr.status !== "pending" && (
+                          <div className="flex gap-2 pt-1 border-t">
+                            <Button size="sm" variant="outline" onClick={() => reviewVerif(vr, vr.status === "approved" ? "rejected" : "approved")}>
+                              {vr.status === "approved" ? <><X className="h-3 w-3 mr-1" /> Revoke</> : <><Check className="h-3 w-3 mr-1" /> Approve</>}
+                            </Button>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

@@ -78,6 +78,7 @@ const Products = () => {
         stock: d.stock,
         is_trending: d.is_trending ?? false,
         original_price: d.original_price ?? null,
+        seller_id: d.seller_id ?? null,
         brand: d.brand ?? null,
         categoryId: d.category_id ?? null,
         categorySlug: (catData ?? []).find((c: any) => c.id === d.category_id)?.slug ?? null,
@@ -344,8 +345,4 @@ const Products = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-export default Products;
+    <

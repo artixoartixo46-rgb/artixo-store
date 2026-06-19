@@ -13,11 +13,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2 } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 
 interface Category { id: string; name: string; }
 interface Product {
@@ -45,6 +46,41 @@ const SellerDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [orderFilter, setOrderFilter] = useState<FilterKey>("all");
+
+  // Verification state
+  const [verif, setVerif] = useState<any>(null);
+  const [verifLoading, setVerifLoading] = useState(true);
+  const [verifForm, setVerifForm] = useState({ business_name: "", business_type: "", phone: "", notes: "" });
+  const [verifSaving, setVerifSaving] = useState(false);
+
+  const refreshVerif = async () => {
+    if (!user) return;
+    setVerifLoading(true);
+    const { data } = await (supabase as any)
+      .from("verification_requests")
+      .select("*")
+      .eq("seller_id", user.id)
+      .maybeSingle();
+    setVerif(data ?? null);
+    if (data) {
+      setVerifForm({ business_name: data.business_name, business_type: data.business_type, phone: data.phone, notes: data.notes ?? "" });
+    }
+    setVerifLoading(false);
+  };
+
+  const submitVerif = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setVerifSaving(true);
+    const payload = { seller_id: user.id, ...verifForm, status: "pending", updated_at: new Date().toISOString() };
+    const { error } = await (supabase as any)
+      .from("verification_requests")
+      .upsert(payload, { onConflict: "seller_id" });
+    setVerifSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Verification request submitted!");
+    refreshVerif();
+  };
 
   const refresh = async () => {
     if (!user) return;
@@ -86,7 +122,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     supabase.from("categories").select("id,name").then(({ data }) => setCategories((data ?? []) as Category[]));
-    refresh(); refreshOrders();
+    refresh(); refreshOrders(); refreshVerif();
   }, [user]);
 
   if (!authLoading && !user) return <Navigate to="/auth" replace />;
@@ -190,6 +226,9 @@ const SellerDashboard = () => {
           <TabsTrigger value="products"><Package className="h-4 w-4 mr-1" /> Products</TabsTrigger>
           <TabsTrigger value="orders"><ShoppingBag className="h-4 w-4 mr-1" /> Orders ({orders.length})</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-1" /> Analytics</TabsTrigger>
+          <TabsTrigger value="verification">
+            <BadgeCheck className="h-4 w-4 mr-1 text-blue-500" /> Verification
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -280,6 +319,103 @@ const SellerDashboard = () => {
         </TabsContent>
         <TabsContent value="analytics">
           <SellerAnalytics orders={orders} products={products} />
+        </TabsContent>
+
+        <TabsContent value="verification">
+          <div className="max-w-lg space-y-4">
+            <div>
+              <h2 className="text-xl font-display font-semibold flex items-center gap-2">
+                <BadgeCheck className="h-5 w-5 text-blue-500" /> Seller Verification
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Get a blue verified badge on your products and profile. Submit your details and our team will review within 1-2 business days.
+              </p>
+            </div>
+
+            {verifLoading ? (
+              <Card className="p-6 text-center text-muted-foreground text-sm">Loading…</Card>
+            ) : verif?.status === "approved" ? (
+              <Card className="p-6 border-blue-200 bg-blue-50/30 space-y-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-8 w-8 text-blue-500" />
+                  <div>
+                    <div className="font-semibold text-blue-700 flex items-center gap-2">
+                      Verified Seller <VerifiedBadge size="md" />
+                    </div>
+                    <div className="text-sm text-blue-600">Your account is verified. The blue tick shows on all your products.</div>
+                  </div>
+                </div>
+                <Separator />
+                <div className="text-sm space-y-1 text-muted-foreground">
+                  <div><span className="font-medium">Business:</span> {verif.business_name}</div>
+                  <div><span className="font-medium">Type:</span> {verif.business_type}</div>
+                </div>
+              </Card>
+            ) : verif?.status === "pending" ? (
+              <Card className="p-6 border-yellow-200 bg-yellow-50/30 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <div className="font-semibold text-yellow-700">Under Review</div>
+                    <div className="text-sm text-yellow-600">Your request is being reviewed. We'll update your status soon.</div>
+                  </div>
+                </div>
+                <Separator />
+                <div className="text-sm space-y-1 text-muted-foreground">
+                  <div><span className="font-medium">Business:</span> {verif.business_name}</div>
+                  <div><span className="font-medium">Type:</span> {verif.business_type}</div>
+                  <div><span className="font-medium">Phone:</span> {verif.phone}</div>
+                  {verif.notes && <div><span className="font-medium">Notes:</span> {verif.notes}</div>}
+                </div>
+              </Card>
+            ) : (
+              <Card className="p-5 space-y-4">
+                {verif?.status === "rejected" && (
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <XCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                    <div>
+                      <div className="font-medium text-destructive text-sm">Previous request rejected</div>
+                      {verif.admin_notes && <div className="text-sm text-muted-foreground mt-0.5">Reason: {verif.admin_notes}</div>}
+                      <div className="text-sm text-muted-foreground mt-0.5">You can update and resubmit below.</div>
+                    </div>
+                  </div>
+                )}
+                <form onSubmit={submitVerif} className="space-y-3">
+                  <div>
+                    <Label>Business Name *</Label>
+                    <Input required placeholder="e.g. Dino Electronics" value={verifForm.business_name}
+                      onChange={(e) => setVerifForm({ ...verifForm, business_name: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Business Type *</Label>
+                    <Select value={verifForm.business_type} onValueChange={(v) => setVerifForm({ ...verifForm, business_type: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                        <SelectItem value="Partnership">Partnership</SelectItem>
+                        <SelectItem value="Private Limited Company">Private Limited Company</SelectItem>
+                        <SelectItem value="Individual Seller">Individual Seller</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Phone Number *</Label>
+                    <Input required placeholder="+94 77 123 4567" value={verifForm.phone}
+                      onChange={(e) => setVerifForm({ ...verifForm, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <Label>Additional Notes</Label>
+                    <Textarea placeholder="Any extra info you'd like us to know…" rows={2} value={verifForm.notes}
+                      onChange={(e) => setVerifForm({ ...verifForm, notes: e.target.value })} />
+                  </div>
+                  <Button variant="hero" type="submit" disabled={verifSaving || !verifForm.business_name || !verifForm.business_type || !verifForm.phone}>
+                    {verifSaving ? "Submitting…" : <><Send className="h-4 w-4 mr-1.5" />{verif?.status === "rejected" ? "Resubmit Request" : "Submit Verification Request"}</>}
+                  </Button>
+                </form>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 

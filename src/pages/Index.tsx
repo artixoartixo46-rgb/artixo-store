@@ -41,6 +41,7 @@ const Index = () => {
           stock: d.stock,
           is_trending: d.is_trending ?? false,
           original_price: d.original_price ?? null,
+          seller_id: (d as any).seller_id ?? null,
         }));
         setTrending(all.filter((p) => p.is_trending).slice(0, 12));
         setNewArrivals(all.slice(0, 12));
@@ -154,9 +155,4 @@ const Index = () => {
           <p className="opacity-90 mb-6 max-w-xl mx-auto">Reach thousands of Sri Lankan shoppers. Open your shop in minutes — completely free to start.</p>
           <Link to="/become-seller"><Button variant="royal" size="lg">Open Your Shop</Button></Link>
         </Card>
-      </section>
-    </div>
-  );
-};
-
-export default Index;
+      </

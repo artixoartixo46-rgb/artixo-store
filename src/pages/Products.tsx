@@ -10,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { LayoutGrid, List, SlidersHorizontal, Package } from "lucide-react";
+import { LayoutGrid, List, SlidersHorizontal, Package, Sparkles, X } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { Link } from "react-router-dom";
 
@@ -28,6 +28,14 @@ const Products = () => {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const cat = params.get("category") ?? "";
+
+  // AI search params
+  const aiQuery = params.get("aiQuery") ? decodeURIComponent(params.get("aiQuery")!) : "";
+  const aiMaxPrice = params.get("maxPrice") ? Number(params.get("maxPrice")) : null;
+  const aiMinPrice = params.get("minPrice") ? Number(params.get("minPrice")) : null;
+  const aiBrand = params.get("brand") ?? "";
+  const aiOnSale = params.get("onSale") === "true";
+  const aiSortParam = (params.get("sort") as Sort) ?? "";
 
   const [products, setProducts] = useState<(ProductCardData & { brand?: string; categorySlug?: string })[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -86,13 +94,27 @@ const Products = () => {
 
             const max = Math.max(100, Math.ceil(Math.max(...list.map((p) => Number(p.price)), 0) / 100) * 100);
       setMaxPrice(max);
-      setPriceRange([0, max]);
+
+      // Apply AI price range to slider if provided
+      const aiMax = params.get("maxPrice") ? Number(params.get("maxPrice")) : null;
+      const aiMin = params.get("minPrice") ? Number(params.get("minPrice")) : null;
+      if (aiMax || aiMin) {
+        setPriceRange([Math.max(0, aiMin ?? 0), Math.min(aiMax ?? max, max)]);
+      } else {
+        setPriceRange([0, max]);
+      }
+
       setBrands(Array.from(new Set(list.map((p) => p.brand).filter(Boolean))) as string[]);
-      setSelectedBrand("");
+      setSelectedBrand(params.get("brand") ?? "");
+      setOnlyDiscounted(params.get("onSale") === "true");
+      const sp = params.get("sort") as Sort | null;
+      if (sp) setSort(sp); else setSort("newest");
+
       setProducts(list);
       setLoading(false);
     })();
-  }, [q, cat]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q, cat, params.get("aiQuery")]);
 
   const filtered = useMemo(() => {
     let list = products.filter(
@@ -229,8 +251,37 @@ const Products = () => {
         <meta property="og:type" content="website" />
       </Helmet>
       <h1 className="font-display text-2xl md:text-3xl mb-1">
-        {q ? `Search: "${q}"` : activeCat?.name ?? "All Products"}
+        {aiQuery ? "AI Search Results" : q ? `Search: "${q}"` : activeCat?.name ?? "All Products"}
       </h1>
+
+      {/* AI search banner */}
+      {aiQuery && (
+        <div
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 rounded-xl text-sm mb-3"
+          style={{ background: "rgba(139,26,46,0.06)", border: "1px solid rgba(139,26,46,0.18)" }}
+        >
+          <span className="flex items-center gap-1.5 font-medium" style={{ color: "#8B1A2E" }}>
+            <Sparkles className="h-3.5 w-3.5" />
+            AI understood:
+          </span>
+          <span className="italic text-muted-foreground">"{aiQuery}"</span>
+          {q && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">keyword: {q}</span>}
+          {cat && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">category: {cat}</span>}
+          {aiMaxPrice && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">max: {formatLKR(aiMaxPrice)}</span>}
+          {aiMinPrice && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">min: {formatLKR(aiMinPrice)}</span>}
+          {aiBrand && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">brand: {aiBrand}</span>}
+          {aiOnSale && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">on sale</span>}
+          {aiSortParam === "price_asc" && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">cheapest first</span>}
+          {aiSortParam === "price_desc" && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">premium first</span>}
+          <button
+            onClick={() => setParams({})}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="h-3 w-3" /> Clear AI filters
+          </button>
+        </div>
+      )}
+
       <p className="text-muted-foreground text-sm mb-4">{filtered.length} {filtered.length === 1 ? "product" : "products"} found</p>
 
       <div className="grid lg:grid-cols-[240px_1fr] gap-6">

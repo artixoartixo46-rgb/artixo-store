@@ -1,33 +1,26 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, Search, User, LogOut, Store, Shield, Menu, Settings } from "lucide-react";
+import { ShoppingCart, User, LogOut, Store, Shield, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
 import artixoLogo from "@/assets/artixo-logo.png";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { AiSearchBar } from "@/components/AiSearchBar";
 
 export const Header = () => {
   const { user, roles, signOut } = useAuth();
   const { count } = useCart();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
   const logoSrc = settings.site_logo || artixoLogo;
 
   const isSeller = roles.includes("seller");
   const isAdmin = roles.includes("admin");
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate(`/products?q=${encodeURIComponent(search)}`);
-  };
 
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
@@ -39,17 +32,7 @@ export const Header = () => {
           </span>
         </Link>
 
-        <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products, brands & more..."
-              className="pl-10 pr-4 h-10 rounded-full input-glass border-transparent focus-visible:bg-white/80 focus-visible:border-white/60 transition-fluid"
-            />
-          </div>
-        </form>
+        <AiSearchBar />
 
         <div className="flex items-center gap-1 sm:gap-2">
           {user && <NotificationBell />}

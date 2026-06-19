@@ -137,7 +137,7 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     // Direct table query — bypasses RPC / schema-cache function lookup entirely
     const { data, error } = await (supabase as any)
       .from("product_reviews")
-      .select("id, customer_id, rating, review_text, created_at, profiles(full_name)")
+      .select("id, customer_id, rating, review_text, created_at")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
 
@@ -147,14 +147,24 @@ export const ReviewSection = ({ productId, productName }: Props) => {
       return;
     }
 
-    // Flatten nested profiles join
+    // Fetch own profile name if logged in (profiles RLS only allows reading own row)
+    let myName: string | null = null;
+    if (user) {
+      const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("full_name")
+        .eq("id", user.id)
+        .single();
+      myName = profile?.full_name ?? null;
+    }
+
     const list: Review[] = (data ?? []).map((r: any) => ({
       id: r.id,
       customer_id: r.customer_id,
       rating: r.rating,
       review_text: r.review_text,
       created_at: r.created_at,
-      full_name: r.profiles?.full_name ?? null,
+      full_name: r.customer_id === user?.id ? myName : null,
     }));
 
     setReviews(list);

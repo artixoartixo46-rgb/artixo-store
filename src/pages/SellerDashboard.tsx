@@ -63,22 +63,44 @@ const SellerDashboard = () => {
     if (!user) return;
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("bio, banner_url, shop_name, full_name")
+      .select("shop_description, banner_url, shop_name, full_name")
       .eq("id", user.id)
-      .single();
-    if (data) setProfileForm({ bio: data.bio ?? "", banner_url: data.banner_url ?? "", shop_name: data.shop_name ?? "", full_name: data.full_name ?? "" });
+      .maybeSingle();
+    if (data) setProfileForm({
+      bio: data.shop_description ?? "",
+      banner_url: data.banner_url ?? "",
+      shop_name: data.shop_name ?? "",
+      full_name: data.full_name ?? "",
+    });
   };
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setProfileSaving(true);
+    // Build update payload — only include banner_url if the column might exist
+    const payload: any = {
+      shop_description: profileForm.bio || null,
+      shop_name: profileForm.shop_name || null,
+      full_name: profileForm.full_name || null,
+    };
+    if (profileForm.banner_url) payload.banner_url = profileForm.banner_url;
     const { error } = await (supabase as any)
       .from("profiles")
-      .update({ bio: profileForm.bio || null, banner_url: profileForm.banner_url || null, shop_name: profileForm.shop_name || null, full_name: profileForm.full_name || null })
+      .update(payload)
       .eq("id", user.id);
     setProfileSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      // If banner_url column doesn't exist yet, retry without it
+      if (error.message?.includes("banner_url")) {
+        delete payload.banner_url;
+        const { error: e2 } = await (supabase as any).from("profiles").update(payload).eq("id", user.id);
+        if (e2) { toast.error(e2.message); return; }
+        toast.success("Shop profile updated! (Banner will be available after DB migration)");
+        return;
+      }
+      toast.error(error.message); return;
+    }
     toast.success("Shop profile updated!");
   };
 

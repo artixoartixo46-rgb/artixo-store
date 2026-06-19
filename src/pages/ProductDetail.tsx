@@ -89,7 +89,7 @@ const ProductDetail = () => {
           .from("profiles")
           .select("full_name, shop_name, is_verified")
           .eq("id", data.seller_id)
-          .single();
+          .maybeSingle();
         if (sData) {
           sellerProfile = {
             fullName: sData.full_name ?? null,
@@ -97,6 +97,21 @@ const ProductDetail = () => {
             isVerified: sData.is_verified ?? false,
             sellerId: data.seller_id,
           };
+        } else {
+          // Fallback: column may not exist yet — fetch without is_verified
+          const { data: sData2 } = await (supabase as any)
+            .from("profiles")
+            .select("full_name, shop_name")
+            .eq("id", data.seller_id)
+            .maybeSingle();
+          if (sData2) {
+            sellerProfile = {
+              fullName: sData2.full_name ?? null,
+              shopName: sData2.shop_name ?? null,
+              isVerified: false,
+              sellerId: data.seller_id,
+            };
+          }
         }
       }
 

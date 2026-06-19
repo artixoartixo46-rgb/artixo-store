@@ -14,8 +14,8 @@ export const useSellerVerified = (sellerId: string | null | undefined) => {
       .select("is_verified")
       .eq("id", sellerId)
       .single()
-      .then(({ data }: any) => {
-        if (data?.is_verified) setVerified(true);
+      .then(({ data, error }: any) => {
+        if (!error && data?.is_verified) setVerified(true);
       });
   }, [sellerId]);
 

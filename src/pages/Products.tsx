@@ -345,4 +345,8 @@ const Products = () => {
           )}
         </div>
       </div>
-    <
+    </div>
+  );
+};
+
+export default Products;

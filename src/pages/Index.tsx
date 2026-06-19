@@ -155,4 +155,9 @@ const Index = () => {
           <p className="opacity-90 mb-6 max-w-xl mx-auto">Reach thousands of Sri Lankan shoppers. Open your shop in minutes — completely free to start.</p>
           <Link to="/become-seller"><Button variant="royal" size="lg">Open Your Shop</Button></Link>
         </Card>
-      </
+      </section>
+    </div>
+  );
+};
+
+export default Index;

@@ -496,4 +496,20 @@ const ProductDetail = () => {
 
       {product.stock > 0 && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t p-3 flex gap-2 z-50 shadow-lg">
-          <Button variant="outline" className="flex-1" onClick={() => add(produc
+          <Button variant="outline" className="flex-1" onClick={() => add(product.id, qty)}>
+            <ShoppingCart className="h-4 w-4 mr-1" /> Cart
+          </Button>
+          <Button variant="hero" className="flex-1" onClick={handleBuyNow}>
+            <Zap className="h-4 w-4 mr-1" /> Buy Now
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ProductDetail;
+
+
+
+

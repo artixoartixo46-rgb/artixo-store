@@ -3,10 +3,11 @@ import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Package, Check } from "lucide-react";
+import { ShoppingCart, Package, Check, Star } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { useProductRating } from "@/components/ReviewSection";
 
 export interface ProductCardData {
   id: string;
@@ -23,6 +24,7 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
   const { user } = useAuth();
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
+  const { avg, count } = useProductRating(p.id);
 
   const hasDiscount = p.original_price && Number(p.original_price) > Number(p.price);
   const discountPct = hasDiscount
@@ -75,6 +77,17 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
             {p.name}
           </h3>
         </Link>
+        {avg !== null && count > 0 && (
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star
+                key={s}
+                className={`h-3 w-3 ${s <= Math.round(avg) ? "fill-primary text-primary" : "text-muted-foreground"}`}
+              />
+            ))}
+            <span className="text-xs text-muted-foreground ml-0.5">({count})</span>
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col leading-tight">
             <span className="font-display font-bold text-primary">{formatLKR(p.price)}</span>

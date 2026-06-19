@@ -23,6 +23,7 @@ import {
 import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
 import { ProductCard } from "@/components/ProductCard";
+import { ReviewSection, useProductRating } from "@/components/ReviewSection";
 import { toast } from "sonner";
 
 const ProductDetail = () => {
@@ -36,6 +37,7 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState<string>("");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const { add } = useCart();
+  const { avg: realAvg, count: realCount } = useProductRating(id ?? "");
 
   useEffect(() => {
         if (!id) return;
@@ -143,8 +145,8 @@ const ProductDetail = () => {
       </div>
     );
 
-  const rating = 4.5;
-  const reviewCount = Math.floor(Math.random() * 500) + 20;
+  const rating = realAvg ?? 0;
+  const reviewCount = realCount;
   const soldCount = Math.floor(Math.random() * 1000) + 50;
   const hasOriginal = product.originalPrice && Number(product.originalPrice) > Number(product.price);
   const originalPrice = hasOriginal ? Number(product.originalPrice) : Number(product.price) * 1.25;
@@ -274,17 +276,23 @@ const ProductDetail = () => {
             )}
 
             <div className="flex items-center gap-3 text-sm flex-wrap">
-              <div className="flex items-center gap-1">
-                <div className="flex">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} className={`h-4 w-4 ${s <= Math.round(rating) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-                  ))}
-                </div>
-                <span className="font-medium">{rating}</span>
-              </div>
-              <Separator orientation="vertical" className="h-4" />
-              <span className="text-muted-foreground">{reviewCount} ratings</span>
-              <Separator orientation="vertical" className="h-4" />
+              {reviewCount > 0 ? (
+                <>
+                  <div className="flex items-center gap-1">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((s) => (
+                        <Star key={s} className={`h-4 w-4 ${s <= Math.round(rating) ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                      ))}
+                    </div>
+                    <span className="font-medium">{rating.toFixed(1)}</span>
+                  </div>
+                  <Separator orientation="vertical" className="h-4" />
+                  <span className="text-muted-foreground">{reviewCount} review{reviewCount !== 1 ? "s" : ""}</span>
+                  <Separator orientation="vertical" className="h-4" />
+                </>
+              ) : (
+                <span className="text-muted-foreground text-xs">No reviews yet</span>
+              )}
               <span className="text-muted-foreground">{soldCount} sold</span>
             </div>
 
@@ -467,6 +475,8 @@ const ProductDetail = () => {
             </Card>
           </div>
         </div>
+
+        <ReviewSection productId={product.id} productName={product.name} />
 
         {related.length > 0 && (
           <div className="mt-8">

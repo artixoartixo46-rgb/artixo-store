@@ -13,10 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
+import { SellerAnalytics } from "@/components/SellerAnalytics";
 
 interface Category { id: string; name: string; }
 interface Product {
@@ -188,6 +189,7 @@ const SellerDashboard = () => {
         <TabsList className="mb-4">
           <TabsTrigger value="products"><Package className="h-4 w-4 mr-1" /> Products</TabsTrigger>
           <TabsTrigger value="orders"><ShoppingBag className="h-4 w-4 mr-1" /> Orders ({orders.length})</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-1" /> Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products">
@@ -275,6 +277,9 @@ const SellerDashboard = () => {
               </div>
             );
           })()}
+        </TabsContent>
+        <TabsContent value="analytics">
+          <SellerAnalytics orders={orders} products={products} />
         </TabsContent>
       </Tabs>
 

@@ -53,14 +53,15 @@ export const ProductQA = ({ productId, sellerId }: Props) => {
   const load = async () => {
     setLoading(true);
 
-    // Fetch questions with asker profile
-    const { data: qs } = await (supabase as any)
+    // Fetch questions with asker profile (table may not exist yet)
+    const qRes = await (supabase as any)
       .from("product_questions")
       .select("id, question, created_at, user_id, profiles:user_id(full_name, shop_name)")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
 
-    if (!qs) { setLoading(false); return; }
+    if (qRes.error || !qRes.data) { setLoading(false); return; }
+    const qs = qRes.data;
 
     // Fetch answers with seller profile
     const qIds = qs.map((q: any) => q.id);
@@ -104,7 +105,12 @@ export const ProductQA = ({ productId, sellerId }: Props) => {
       .from("product_questions")
       .insert({ product_id: productId, user_id: user.id, question: q });
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message?.includes("schema cache") || error.message?.includes("does not exist")
+        ? "Q&A is being set up. Try again shortly."
+        : error.message);
+      return;
+    }
     toast.success("Question posted!");
     setQuestionText("");
     setAsking(false);
@@ -120,7 +126,7 @@ export const ProductQA = ({ productId, sellerId }: Props) => {
       .from("product_answers")
       .upsert({ question_id: questionId, seller_id: user.id, answer: a }, { onConflict: "question_id" });
     setAnswerSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(error.message?.includes("schema cache") ? "Q&A is being set up." : error.message); return; }
     toast.success("Answer posted!");
     setAnsweringId(null);
     setAnswerText((t) => ({ ...t, [questionId]: "" }));

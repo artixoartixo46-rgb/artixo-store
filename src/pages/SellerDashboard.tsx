@@ -120,11 +120,12 @@ const SellerDashboard = () => {
   const refreshVerif = async () => {
     if (!user) return;
     setVerifLoading(true);
-    const { data } = await (supabase as any)
+    const { data, error } = await (supabase as any)
       .from("verification_requests")
       .select("*")
       .eq("seller_id", user.id)
       .maybeSingle();
+    if (error) { setVerifLoading(false); return; } // table may not exist yet
     setVerif(data ?? null);
     if (data) {
       setVerifForm({ business_name: data.business_name, business_type: data.business_type, phone: data.phone, notes: data.notes ?? "" });
@@ -141,7 +142,14 @@ const SellerDashboard = () => {
       .from("verification_requests")
       .upsert(payload, { onConflict: "seller_id" });
     setVerifSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (error.message?.includes("schema cache") || error.message?.includes("does not exist")) {
+        toast.error("Verification system is being set up. Please try again in a moment.");
+      } else {
+        toast.error(error.message);
+      }
+      return;
+    }
     toast.success("Verification request submitted!");
     refreshVerif();
   };

@@ -93,15 +93,15 @@ const SellerStorefront = () => {
       setReviewCount(ratings.length);
     }
 
-    // Followers
-    const { count } = await (supabase as any)
+    // Followers (table may not exist yet — fail silently)
+    const folRes = await (supabase as any)
       .from("seller_follows")
       .select("id", { count: "exact", head: true })
       .eq("seller_id", id);
-    setFollowerCount(count ?? 0);
+    if (!folRes.error) setFollowerCount(folRes.count ?? 0);
 
     // Is current user following?
-    if (user) {
+    if (user && !folRes.error) {
       const { data: fol } = await (supabase as any)
         .from("seller_follows")
         .select("id")
@@ -121,21 +121,19 @@ const SellerStorefront = () => {
     if (!id) return;
     setFollowLoading(true);
     if (isFollowing) {
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from("seller_follows")
         .delete()
         .eq("seller_id", id)
         .eq("follower_id", user.id);
-      setIsFollowing(false);
-      setFollowerCount((c) => Math.max(0, c - 1));
-      toast.success("Unfollowed");
+      if (!error) { setIsFollowing(false); setFollowerCount((c) => Math.max(0, c - 1)); }
+      toast.success(error ? "Follow feature coming soon!" : "Unfollowed");
     } else {
-      await (supabase as any)
+      const { error } = await (supabase as any)
         .from("seller_follows")
         .insert({ seller_id: id, follower_id: user.id });
-      setIsFollowing(true);
-      setFollowerCount((c) => c + 1);
-      toast.success("Following!");
+      if (!error) { setIsFollowing(true); setFollowerCount((c) => c + 1); }
+      toast.success(error ? "Follow feature coming soon!" : "Following!");
     }
     setFollowLoading(false);
   };

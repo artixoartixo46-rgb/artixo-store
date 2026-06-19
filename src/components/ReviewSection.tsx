@@ -149,11 +149,17 @@ export const ReviewSection = ({ productId, productName }: Props) => {
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("product_reviews")
-      .select("*, profiles(full_name)")
+      .select("id, product_id, customer_id, rating, review_text, created_at, profiles(full_name)")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[Reviews]", error.message);
+      setLoading(false);
+      return;
+    }
     const list = (data ?? []) as Review[];
     setReviews(list);
     setLoading(false);
@@ -387,8 +393,8 @@ export const useProductRating = (productId: string) => {
       .from("product_reviews")
       .select("rating")
       .eq("product_id", productId)
-      .then(({ data }) => {
-        if (!data || data.length === 0) return;
+      .then(({ data, error }) => {
+        if (error || !data || data.length === 0) return;
         setCount(data.length);
         setAvg(data.reduce((s, r) => s + r.rating, 0) / data.length);
       });

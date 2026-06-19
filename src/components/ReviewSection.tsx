@@ -16,7 +16,7 @@ interface Review {
   rating: number;
   review_text: string | null;
   created_at: string;
-  profiles?: { full_name: string | null };
+  full_name: string | null;
 }
 
 interface Props {
@@ -25,10 +25,7 @@ interface Props {
 }
 
 // ── AI sentiment summary ──────────────────────────────────────────────────────
-async function summariseReviews(
-  reviews: Review[],
-  productName: string
-): Promise<string | null> {
+async function summariseReviews(reviews: Review[], productName: string): Promise<string | null> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey || reviews.length < 2) return null;
 
@@ -42,7 +39,7 @@ Product: "${productName}"
 Reviews:
 ${lines}
 
-Write ONE short sentence (max 20 words) summarising the overall sentiment. Start with a positive or cautious tone. No quotes, no markdown.`;
+Write ONE short sentence (max 20 words) summarising the overall sentiment. No quotes, no markdown.`;
 
   try {
     const res = await fetch(
@@ -58,22 +55,14 @@ Write ONE short sentence (max 20 words) summarising the overall sentiment. Start
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return (
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null
-    );
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
   } catch {
     return null;
   }
 }
 
-// ── Star picker ────────────────────────────────────────────────────────────────
-const StarPicker = ({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) => {
+// ── Star picker ───────────────────────────────────────────────────────────────
+const StarPicker = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
   const [hovered, setHovered] = useState(0);
   return (
     <div className="flex gap-1" role="group" aria-label="Select rating">
@@ -89,9 +78,7 @@ const StarPicker = ({
         >
           <Star
             className={`h-7 w-7 transition-colors ${
-              s <= (hovered || value)
-                ? "fill-primary text-primary"
-                : "text-muted-foreground"
+              s <= (hovered || value) ? "fill-primary text-primary" : "text-muted-foreground"
             }`}
           />
         </button>
@@ -100,7 +87,7 @@ const StarPicker = ({
   );
 };
 
-// ── Static stars display ───────────────────────────────────────────────────────
+// ── Static stars ──────────────────────────────────────────────────────────────
 const Stars = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) => {
   const cls = size === "md" ? "h-5 w-5" : "h-4 w-4";
   return (
@@ -108,9 +95,7 @@ const Stars = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) 
       {[1, 2, 3, 4, 5].map((s) => (
         <Star
           key={s}
-          className={`${cls} ${
-            s <= Math.round(rating) ? "fill-primary text-primary" : "text-muted-foreground"
-          }`}
+          className={`${cls} ${s <= Math.round(rating) ? "fill-primary text-primary" : "text-muted-foreground"}`}
         />
       ))}
     </div>
@@ -132,7 +117,7 @@ const RatingBar = ({ star, count, total }: { star: number; count: number; total:
   </div>
 );
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export const ReviewSection = ({ productId, productName }: Props) => {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -140,7 +125,6 @@ export const ReviewSection = ({ productId, productName }: Props) => {
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  // Form state
   const [myRating, setMyRating] = useState(0);
   const [myText, setMyText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -149,22 +133,21 @@ export const ReviewSection = ({ productId, productName }: Props) => {
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("product_reviews")
-      .select("id, product_id, customer_id, rating, review_text, created_at, profiles(full_name)")
-      .eq("product_id", productId)
-      .order("created_at", { ascending: false });
+    // Use RPC — bypasses PostgREST schema cache entirely
+    const { data, error } = await supabase.rpc("get_product_reviews", {
+      p_product_id: productId,
+    });
 
     if (error) {
       console.error("[Reviews]", error.message);
       setLoading(false);
       return;
     }
+
     const list = (data ?? []) as Review[];
     setReviews(list);
     setLoading(false);
 
-    // Find own review
     if (user) {
       const own = list.find((r) => r.customer_id === user.id) ?? null;
       setMyReview(own);
@@ -174,7 +157,6 @@ export const ReviewSection = ({ productId, productName }: Props) => {
       }
     }
 
-    // AI summary — only fetch once we have ≥2 reviews and no summary yet
     if (list.length >= 2) {
       setSummaryLoading(true);
       summariseReviews(list, productName).then((s) => {
@@ -193,36 +175,25 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     if (myRating === 0) { toast.error("Please select a star rating"); return; }
     setSubmitting(true);
 
-    if (myReview && !editing) { setEditing(true); setSubmitting(false); return; }
-
-    const payload = {
-      product_id: productId,
-      customer_id: user.id,
-      rating: myRating,
-      review_text: myText.trim() || null,
-    };
-
-    const { error } = myReview
-      ? await supabase
-          .from("product_reviews")
-          .update({ rating: myRating, review_text: myText.trim() || null })
-          .eq("id", myReview.id)
-      : await supabase.from("product_reviews").insert(payload);
+    const { error } = await supabase.rpc("upsert_product_review", {
+      p_product_id: productId,
+      p_rating: myRating,
+      p_review_text: myText.trim() || null,
+    });
 
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
     toast.success(myReview ? "Review updated!" : "Review submitted!");
     setEditing(false);
-    setAiSummary(null); // refresh summary
+    setAiSummary(null);
     loadReviews();
   };
 
   const deleteReview = async () => {
     if (!myReview) return;
-    const { error } = await supabase
-      .from("product_reviews")
-      .delete()
-      .eq("id", myReview.id);
+    const { error } = await supabase.rpc("delete_product_review", {
+      p_review_id: myReview.id,
+    });
     if (error) { toast.error(error.message); return; }
     toast.success("Review deleted");
     setMyReview(null);
@@ -232,12 +203,8 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     loadReviews();
   };
 
-  // Stats
   const total = reviews.length;
-  const avg =
-    total > 0
-      ? reviews.reduce((s, r) => s + r.rating, 0) / total
-      : 0;
+  const avg = total > 0 ? reviews.reduce((s, r) => s + r.rating, 0) / total : 0;
   const starCounts = [5, 4, 3, 2, 1].map((s) => ({
     star: s,
     count: reviews.filter((r) => r.rating === s).length,
@@ -249,14 +216,13 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     <div className="mt-8 space-y-6">
       <h2 className="font-display text-2xl">Ratings &amp; Reviews</h2>
 
-      {/* ── AI summary ── */}
+      {/* AI summary */}
       {(aiSummary || summaryLoading) && (
         <Card className="p-3 flex items-start gap-2.5 border-primary/20 bg-primary/5">
           <Sparkles className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           {summaryLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Generating AI summary…
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating AI summary…
             </div>
           ) : (
             <p className="text-sm text-foreground leading-relaxed">
@@ -267,7 +233,7 @@ export const ReviewSection = ({ productId, productName }: Props) => {
         </Card>
       )}
 
-      {/* ── Overview ── */}
+      {/* Overview */}
       {total > 0 && (
         <div className="flex gap-6 flex-wrap">
           <div className="flex flex-col items-center justify-center min-w-[80px]">
@@ -275,7 +241,9 @@ export const ReviewSection = ({ productId, productName }: Props) => {
               {avg.toFixed(1)}
             </span>
             <Stars rating={avg} size="md" />
-            <span className="text-xs text-muted-foreground mt-1">{total} review{total !== 1 ? "s" : ""}</span>
+            <span className="text-xs text-muted-foreground mt-1">
+              {total} review{total !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="flex-1 space-y-1.5 min-w-[160px]">
             {starCounts.map(({ star, count }) => (
@@ -287,7 +255,7 @@ export const ReviewSection = ({ productId, productName }: Props) => {
 
       {total > 0 && <Separator />}
 
-      {/* ── Write a review ── */}
+      {/* Write / edit review */}
       {!user ? (
         <p className="text-sm text-muted-foreground">
           <a href="/auth" className="text-primary hover:underline">Sign in</a> to leave a review.
@@ -311,33 +279,30 @@ export const ReviewSection = ({ productId, productName }: Props) => {
           <p className="text-sm font-medium">{editing ? "Edit your review" : "Write a review"}</p>
           <StarPicker value={myRating} onChange={setMyRating} />
           <Textarea
-            placeholder="Share your experience with this product… (optional)"
+            placeholder="Share your experience… (optional)"
             value={myText}
             onChange={(e) => setMyText(e.target.value)}
             rows={3}
             maxLength={1000}
           />
           <div className="flex gap-2">
-            <Button
-              variant="hero"
-              size="sm"
-              disabled={submitting || myRating === 0}
-              onClick={submit}
-            >
+            <Button variant="hero" size="sm" disabled={submitting || myRating === 0} onClick={submit}>
               {submitting ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Saving…</>
+                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Saving…</>
               ) : editing ? "Update Review" : "Submit Review"}
             </Button>
             {editing && (
-              <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setMyRating(myReview!.rating); setMyText(myReview!.review_text ?? ""); }}>
-                Cancel
-              </Button>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setEditing(false);
+                setMyRating(myReview!.rating);
+                setMyText(myReview!.review_text ?? "");
+              }}>Cancel</Button>
             )}
           </div>
         </Card>
       ) : null}
 
-      {/* ── Reviews list ── */}
+      {/* Reviews list */}
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading reviews…
@@ -347,15 +312,8 @@ export const ReviewSection = ({ productId, productName }: Props) => {
       ) : (
         <div className="space-y-4">
           {reviews.map((r) => {
-            const name =
-              (r.profiles as any)?.full_name ||
-              (r.customer_id === user?.id ? "You" : "Customer");
-            const initials = name
-              .split(" ")
-              .map((w: string) => w[0])
-              .slice(0, 2)
-              .join("")
-              .toUpperCase();
+            const name = r.full_name || (r.customer_id === user?.id ? "You" : "Customer");
+            const initials = name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
             const date = new Date(r.created_at).toLocaleDateString("en-LK", {
               year: "numeric", month: "short", day: "numeric",
             });
@@ -383,20 +341,22 @@ export const ReviewSection = ({ productId, productName }: Props) => {
   );
 };
 
-// ── Exported helper for ProductCard / ProductDetail header ────────────────────
+// ── Exported hook for ProductCard / ProductDetail header ──────────────────────
 export const useProductRating = (productId: string) => {
   const [avg, setAvg] = useState<number | null>(null);
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    if (!productId) return;
     supabase
-      .from("product_reviews")
-      .select("rating")
-      .eq("product_id", productId)
+      .rpc("get_product_avg_rating", { p_product_id: productId })
       .then(({ data, error }) => {
         if (error || !data || data.length === 0) return;
-        setCount(data.length);
-        setAvg(data.reduce((s, r) => s + r.rating, 0) / data.length);
+        const row = data[0];
+        if (row.review_count > 0) {
+          setCount(Number(row.review_count));
+          setAvg(Number(row.avg_rating));
+        }
       });
   }, [productId]);
 

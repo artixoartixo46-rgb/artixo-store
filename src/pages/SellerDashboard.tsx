@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
@@ -159,7 +159,14 @@ const SellerDashboard = () => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
     const url = await uploadFile(file);
-    if (url) { setForm((f) => ({ ...f, image_url: f.image_url || url, images: f.images.includes(url) ? f.images : [...f.images, url] })); toast.success("Image uploaded"); }
+    if (url) {
+      setForm((f) => ({
+        ...f,
+        image_url: url,
+        images: f.images.includes(url) ? f.images : [url, ...f.images].slice(0, 8),
+      }));
+      toast.success("Image uploaded");
+    }
     setUploading(false); e.target.value = "";
   };
 
@@ -168,9 +175,12 @@ const SellerDashboard = () => {
     setUploading(true);
     const urls: string[] = [];
     for (const f of files) { const u = await uploadFile(f); if (u) urls.push(u); }
-    setForm((f) => ({ ...f, image_url: f.image_url || urls[0] || "", images: [...f.images, ...urls].slice(0, 8) }));
+    setForm((f) => {
+      const merged = [...f.images, ...urls].slice(0, 8);
+      return { ...f, image_url: f.image_url || merged[0] || "", images: merged };
+    });
     setUploading(false);
-    if (urls.length) toast.success(`${urls.length} image(s) added`);
+    if (urls.length) toast.success(`${urls.length} image${urls.length > 1 ? "s" : ""} added`);
     e.target.value = "";
   };
 
@@ -445,32 +455,59 @@ const SellerDashboard = () => {
             <div><Label>Sizes (comma-separated)</Label><Input placeholder="S, M, L, XL" value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} /></div>
             <Separator />
             <div>
-              <Label>Main Image</Label>
-              {form.image_url && <img src={form.image_url} alt="" className="h-24 w-24 rounded-lg object-cover mb-2 border" />}
-              <label className="flex items-center justify-center gap-2 border border-dashed rounded-lg p-3 cursor-pointer hover:bg-muted transition-smooth mb-2">
-                <Upload className="h-4 w-4" /><span className="text-sm">{uploading ? "Uploading..." : "Click to upload main image"}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleMainUpload} disabled={uploading} />
-              </label>
-              <Input placeholder="Or paste image URL" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
-            </div>
-            <div>
-              <Label>Additional Images</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Product Images</Label>
+                <span className="text-xs text-muted-foreground">{form.images.length} / 8</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">First image is the primary. Click ★ on any image to make it primary.</p>
               {form.images.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {form.images.map((url, i) => (
                     <div key={i} className="relative h-20 w-20 rounded-lg overflow-hidden border group">
                       <img src={url} alt="" className="h-full w-full object-cover" />
-                      <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth">
+                      {/* Primary badge */}
+                      {url === form.image_url && (
+                        <div className="absolute top-0.5 left-0.5 bg-primary text-primary-foreground rounded text-[9px] font-bold px-1 py-0.5 leading-none">PRIMARY</div>
+                      )}
+                      {/* Set primary button */}
+                      {url !== form.image_url && (
+                        <button
+                          type="button"
+                          title="Set as primary"
+                          onClick={() => setForm((f) => ({ ...f, image_url: url }))}
+                          className="absolute top-0.5 left-0.5 bg-black/50 text-yellow-400 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth"
+                        >
+                          <Star className="h-3 w-3" />
+                        </button>
+                      )}
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        title="Remove"
+                        onClick={() => {
+                          const newImages = form.images.filter((_, j) => j !== i);
+                          const newPrimary = url === form.image_url ? (newImages[0] ?? "") : form.image_url;
+                          setForm((f) => ({ ...f, images: newImages, image_url: newPrimary }));
+                        }}
+                        className="absolute top-0.5 right-0.5 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth"
+                      >
                         <Trash2 className="h-3 w-3" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
-              <label className="flex items-center justify-center gap-2 border border-dashed rounded-lg p-3 cursor-pointer hover:bg-muted transition-smooth">
-                <Upload className="h-4 w-4" /><span className="text-sm">{uploading ? "Uploading..." : "Add gallery images"}</span>
+              <label className={`flex items-center justify-center gap-2 border border-dashed rounded-lg p-3 cursor-pointer hover:bg-muted transition-smooth ${form.images.length >= 8 ? "opacity-40 cursor-not-allowed" : ""}`}>
+                <Upload className="h-4 w-4" />
+                <span className="text-sm">{uploading ? "Uploading..." : form.images.length === 0 ? "Upload images (up to 8)" : "Add more images"}</span>
                 <input type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryUpload} disabled={uploading || form.images.length >= 8} />
               </label>
+              {form.image_url && (
+                <div className="mt-2">
+                  <Label className="text-xs text-muted-foreground">Or paste main image URL</Label>
+                  <Input className="mt-1" placeholder="https://..." value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

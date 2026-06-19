@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import { useCart } from "@/hooks/useCart";
 import { ProductCard } from "@/components/ProductCard";
 import { ReviewSection, useProductRating } from "@/components/ReviewSection";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { ImageLightbox } from "@/components/ImageLightbox";
+import { ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 
 const ProductDetail = () => {
@@ -37,6 +39,8 @@ const ProductDetail = () => {
   const [related, setRelated] = useState<any[]>([]);
   const [activeImage, setActiveImage] = useState<string>("");
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const { add } = useCart();
   const { avg: realAvg, count: realCount } = useProductRating(id ?? "");
 
@@ -218,23 +222,44 @@ const ProductDetail = () => {
         <div className="grid lg:grid-cols-[1fr_1.2fr_320px] gap-4">
           {/* Image gallery */}
           <div className="lg:sticky lg:top-20 self-start space-y-2">
-            <Card className="aspect-square overflow-hidden bg-background">
+            <Card
+              className="aspect-square overflow-hidden bg-background relative group"
+              onClick={() => {
+                if (activeImage && activeImage !== "__video__") {
+                  const i = gallery.indexOf(activeImage);
+                  setLightboxIndex(i >= 0 ? i : 0);
+                  setLightboxOpen(true);
+                }
+              }}
+              style={{ cursor: activeImage && activeImage !== "__video__" ? "zoom-in" : "default" }}
+            >
               {activeImage === "__video__" ? (
                 isYouTube ? (
-                  <iframe src={embedUrl} className="w-full h-full" allowFullScreen title="Product video" />
+                  <iframe src={embedUrl} className="w-full h-full" allowFullScreen title="Product video" onClick={(e) => e.stopPropagation()} />
                 ) : (
-                  <video src={videoUrl} controls autoPlay className="w-full h-full" />
+                  <video src={videoUrl} controls autoPlay className="w-full h-full" onClick={(e) => e.stopPropagation()} />
                 )
               ) : activeImage ? (
-                <img src={activeImage} alt={product.name} className="w-full h-full object-contain" />
+                <>
+                  <img src={activeImage} alt={product.name} className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]" />
+                  <div className="absolute bottom-2 right-2 bg-black/50 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ZoomIn className="h-4 w-4 text-white" />
+                  </div>
+                  {gallery.length > 1 && (
+                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] font-medium rounded-full px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {gallery.indexOf(activeImage) + 1} / {gallery.length}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Package className="h-24 w-24 text-muted-foreground" />
                 </div>
               )}
             </Card>
+
             {(videoUrl || gallery.length > 1) && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {videoUrl && (
                   <button
                     onClick={() => setActiveImage("__video__")}
@@ -250,6 +275,7 @@ const ProductDetail = () => {
                     onMouseEnter={() => setActiveImage(url)}
                     onClick={() => setActiveImage(url)}
                     className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-smooth ${activeImage === url ? "border-primary" : "border-transparent hover:border-muted-foreground/40"}`}
+                    aria-label={`Image ${i + 1}`}
                   >
                     <img src={url} alt="" className="h-full w-full object-cover" />
                   </button>
@@ -257,6 +283,16 @@ const ProductDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Lightbox */}
+          {lightboxOpen && gallery.length > 0 && (
+            <ImageLightbox
+              images={gallery}
+              startIndex={lightboxIndex}
+              productName={product.name}
+              onClose={() => setLightboxOpen(false)}
+            />
+          )}
 
           {/* Details */}
           <Card className="p-5 space-y-4 bg-background">

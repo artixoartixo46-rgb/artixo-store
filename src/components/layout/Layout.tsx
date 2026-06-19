@@ -4,6 +4,7 @@ import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { ChatBot } from "@/components/ChatBot";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 export const Layout = ({ children }: { children: ReactNode }) => {
   const { pathname } = useLocation();
@@ -20,6 +21,7 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <main className="flex-1">{children}</main>
       <Footer />
       <ChatBot />
+      <PwaInstallPrompt />
     </div>
   );
 };

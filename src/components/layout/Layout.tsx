@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { ChatBot } from "@/components/ChatBot";
-import { AiStylist } from "@/components/AiStylist";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 
 export const Layout = ({ children }: { children: ReactNode }) => {
@@ -20,7 +19,6 @@ export const Layout = ({ children }: { children: ReactNode }) => {
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
-      <AiStylist />
       <ChatBot />
     </div>
   );

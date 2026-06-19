@@ -10,13 +10,15 @@ import { toast } from "sonner";
 
 const GEMINI_MODEL = "gemini-2.0-flash-lite";
 
+// Uses the pre-existing `reviews` table (always in PostgREST schema cache)
+// Column mapping: user_id=reviewer, comment=review text, rating=int
+
 interface Review {
   id: string;
-  customer_id: string;
+  user_id: string;
   rating: number;
-  review_text: string | null;
+  comment: string;
   created_at: string;
-  full_name: string | null;
 }
 
 interface Props {
@@ -31,7 +33,7 @@ async function summariseReviews(reviews: Review[], productName: string): Promise
 
   const lines = reviews
     .slice(0, 20)
-    .map((r) => `★${r.rating}/5 — ${r.review_text || "(no text)"}`)
+    .map((r) => `★${r.rating}/5 — ${r.comment || "(no text)"}`)
     .join("\n");
 
   const prompt = `You are a review summariser for an e-commerce marketplace in Sri Lanka.
@@ -134,48 +136,29 @@ export const ReviewSection = ({ productId, productName }: Props) => {
   const loadReviews = useCallback(async () => {
     setLoading(true);
 
-    // Direct table query — bypasses RPC / schema-cache function lookup entirely
+    // Use the pre-existing `reviews` table — always in PostgREST cache
     const { data, error } = await (supabase as any)
-      .from("product_reviews")
-      .select("id, customer_id, rating, review_text, created_at")
+      .from("reviews")
+      .select("id, user_id, rating, comment, created_at")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[Reviews]", error.message);
+      console.error("[Reviews load]", error.message);
       setLoading(false);
       return;
     }
 
-    // Fetch own profile name if logged in (profiles RLS only allows reading own row)
-    let myName: string | null = null;
-    if (user) {
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      myName = profile?.full_name ?? null;
-    }
-
-    const list: Review[] = (data ?? []).map((r: any) => ({
-      id: r.id,
-      customer_id: r.customer_id,
-      rating: r.rating,
-      review_text: r.review_text,
-      created_at: r.created_at,
-      full_name: r.customer_id === user?.id ? myName : null,
-    }));
-
+    const list: Review[] = data ?? [];
     setReviews(list);
     setLoading(false);
 
     if (user) {
-      const own = list.find((r) => r.customer_id === user.id) ?? null;
+      const own = list.find((r) => r.user_id === user.id) ?? null;
       setMyReview(own);
       if (own) {
         setMyRating(own.rating);
-        setMyText(own.review_text ?? "");
+        setMyText(own.comment ?? "");
       }
     }
 
@@ -197,17 +180,17 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     if (myRating === 0) { toast.error("Please select a star rating"); return; }
     setSubmitting(true);
 
-    // Upsert on unique (product_id, customer_id) constraint
     const { error } = await (supabase as any)
-      .from("product_reviews")
+      .from("reviews")
       .upsert(
         {
           product_id: productId,
-          customer_id: user.id,
+          user_id: user.id,
           rating: myRating,
-          review_text: myText.trim() || null,
+          comment: myText.trim() || "",
+          updated_at: new Date().toISOString(),
         },
-        { onConflict: "product_id,customer_id" }
+        { onConflict: "user_id,product_id" }
       );
 
     setSubmitting(false);
@@ -221,7 +204,7 @@ export const ReviewSection = ({ productId, productName }: Props) => {
   const deleteReview = async () => {
     if (!myReview) return;
     const { error } = await (supabase as any)
-      .from("product_reviews")
+      .from("reviews")
       .delete()
       .eq("id", myReview.id);
 
@@ -301,8 +284,8 @@ export const ReviewSection = ({ productId, productName }: Props) => {
             </div>
           </div>
           <Stars rating={myReview.rating} />
-          {myReview.review_text && (
-            <p className="text-sm mt-2 text-foreground">{myReview.review_text}</p>
+          {myReview.comment && (
+            <p className="text-sm mt-2 text-foreground">{myReview.comment}</p>
           )}
         </Card>
       ) : canShowForm ? (
@@ -326,7 +309,7 @@ export const ReviewSection = ({ productId, productName }: Props) => {
               <Button variant="ghost" size="sm" onClick={() => {
                 setEditing(false);
                 setMyRating(myReview!.rating);
-                setMyText(myReview!.review_text ?? "");
+                setMyText(myReview!.comment ?? "");
               }}>Cancel</Button>
             )}
           </div>
@@ -343,8 +326,9 @@ export const ReviewSection = ({ productId, productName }: Props) => {
       ) : (
         <div className="space-y-4">
           {reviews.map((r) => {
-            const name = r.full_name || (r.customer_id === user?.id ? "You" : "Customer");
-            const initials = name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+            const isMe = r.user_id === user?.id;
+            const name = isMe ? "You" : "Customer";
+            const initials = isMe ? "ME" : "C";
             const date = new Date(r.created_at).toLocaleDateString("en-LK", {
               year: "numeric", month: "short", day: "numeric",
             });
@@ -359,8 +343,8 @@ export const ReviewSection = ({ productId, productName }: Props) => {
                     <Stars rating={r.rating} />
                     <span className="text-xs text-muted-foreground">{date}</span>
                   </div>
-                  {r.review_text && (
-                    <p className="text-sm text-foreground mt-1 leading-relaxed">{r.review_text}</p>
+                  {r.comment && (
+                    <p className="text-sm text-foreground mt-1 leading-relaxed">{r.comment}</p>
                   )}
                 </div>
               </div>
@@ -381,7 +365,7 @@ export const useProductRating = (productId: string) => {
     if (!productId) return;
 
     (supabase as any)
-      .from("product_reviews")
+      .from("reviews")
       .select("rating")
       .eq("product_id", productId)
       .then(({ data, error }: any) => {

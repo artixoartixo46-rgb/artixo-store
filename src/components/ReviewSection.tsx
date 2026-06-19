@@ -133,10 +133,13 @@ export const ReviewSection = ({ productId, productName }: Props) => {
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
-    // Use RPC — bypasses PostgREST schema cache entirely
-    const { data, error } = await supabase.rpc("get_product_reviews", {
-      p_product_id: productId,
-    });
+
+    // Direct table query — bypasses RPC / schema-cache function lookup entirely
+    const { data, error } = await (supabase as any)
+      .from("product_reviews")
+      .select("id, customer_id, rating, review_text, created_at, profiles(full_name)")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
 
     if (error) {
       console.error("[Reviews]", error.message);
@@ -144,7 +147,16 @@ export const ReviewSection = ({ productId, productName }: Props) => {
       return;
     }
 
-    const list = (data ?? []) as Review[];
+    // Flatten nested profiles join
+    const list: Review[] = (data ?? []).map((r: any) => ({
+      id: r.id,
+      customer_id: r.customer_id,
+      rating: r.rating,
+      review_text: r.review_text,
+      created_at: r.created_at,
+      full_name: r.profiles?.full_name ?? null,
+    }));
+
     setReviews(list);
     setLoading(false);
 
@@ -175,11 +187,18 @@ export const ReviewSection = ({ productId, productName }: Props) => {
     if (myRating === 0) { toast.error("Please select a star rating"); return; }
     setSubmitting(true);
 
-    const { error } = await supabase.rpc("upsert_product_review", {
-      p_product_id: productId,
-      p_rating: myRating,
-      p_review_text: myText.trim() || null,
-    });
+    // Upsert on unique (product_id, customer_id) constraint
+    const { error } = await (supabase as any)
+      .from("product_reviews")
+      .upsert(
+        {
+          product_id: productId,
+          customer_id: user.id,
+          rating: myRating,
+          review_text: myText.trim() || null,
+        },
+        { onConflict: "product_id,customer_id" }
+      );
 
     setSubmitting(false);
     if (error) { toast.error(error.message); return; }
@@ -191,9 +210,11 @@ export const ReviewSection = ({ productId, productName }: Props) => {
 
   const deleteReview = async () => {
     if (!myReview) return;
-    const { error } = await supabase.rpc("delete_product_review", {
-      p_review_id: myReview.id,
-    });
+    const { error } = await (supabase as any)
+      .from("product_reviews")
+      .delete()
+      .eq("id", myReview.id);
+
     if (error) { toast.error(error.message); return; }
     toast.success("Review deleted");
     setMyReview(null);
@@ -348,15 +369,18 @@ export const useProductRating = (productId: string) => {
 
   useEffect(() => {
     if (!productId) return;
-    supabase
-      .rpc("get_product_avg_rating", { p_product_id: productId })
-      .then(({ data, error }) => {
+
+    (supabase as any)
+      .from("product_reviews")
+      .select("rating")
+      .eq("product_id", productId)
+      .then(({ data, error }: any) => {
         if (error || !data || data.length === 0) return;
-        const row = data[0];
-        if (row.review_count > 0) {
-          setCount(Number(row.review_count));
-          setAvg(Number(row.avg_rating));
-        }
+        const ratings: number[] = data.map((r: any) => Number(r.rating));
+        const total = ratings.length;
+        const sum = ratings.reduce((s: number, v: number) => s + v, 0);
+        setCount(total);
+        setAvg(sum / total);
       });
   }, [productId]);
 

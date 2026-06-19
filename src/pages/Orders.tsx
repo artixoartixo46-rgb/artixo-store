@@ -11,6 +11,7 @@ import { formatLKR } from "@/lib/format";
 import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
+import { SriLankaDeliveryMap } from "@/components/SriLankaDeliveryMap";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -149,6 +150,15 @@ const Orders = () => {
         </div>
 
         <OrderStatusTimeline status={o.status as OrderStatus} />
+
+        {o.status !== "cancelled" && (
+          <div className="mb-3">
+            <SriLankaDeliveryMap
+              status={o.status as OrderStatus}
+              shippingAddress={o.shipping_address || ""}
+            />
+          </div>
+        )}
 
         <Separator className="my-3" />
 

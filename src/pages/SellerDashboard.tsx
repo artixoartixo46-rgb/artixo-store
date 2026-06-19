@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
@@ -52,6 +52,48 @@ const SellerDashboard = () => {
   const [verifLoading, setVerifLoading] = useState(true);
   const [verifForm, setVerifForm] = useState({ business_name: "", business_type: "", phone: "", notes: "" });
   const [verifSaving, setVerifSaving] = useState(false);
+
+  // Shop profile state
+  const [profileForm, setProfileForm] = useState({ bio: "", banner_url: "", shop_name: "", full_name: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    const { data } = await (supabase as any)
+      .from("profiles")
+      .select("bio, banner_url, shop_name, full_name")
+      .eq("id", user.id)
+      .single();
+    if (data) setProfileForm({ bio: data.bio ?? "", banner_url: data.banner_url ?? "", shop_name: data.shop_name ?? "", full_name: data.full_name ?? "" });
+  };
+
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
+    const { error } = await (supabase as any)
+      .from("profiles")
+      .update({ bio: profileForm.bio || null, banner_url: profileForm.banner_url || null, shop_name: profileForm.shop_name || null, full_name: profileForm.full_name || null })
+      .eq("id", user.id);
+    setProfileSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Shop profile updated!");
+  };
+
+  const uploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !user) return;
+    setBannerUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `banners/${user.id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setBannerUploading(false); return; }
+    const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+    setProfileForm((f) => ({ ...f, banner_url: pub.publicUrl }));
+    setBannerUploading(false);
+    e.target.value = "";
+  };
 
   const refreshVerif = async () => {
     if (!user) return;
@@ -122,7 +164,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     supabase.from("categories").select("id,name").then(({ data }) => setCategories((data ?? []) as Category[]));
-    refresh(); refreshOrders(); refreshVerif();
+    refresh(); refreshOrders(); refreshVerif(); loadProfile();
   }, [user]);
 
   if (!authLoading && !user) return <Navigate to="/auth" replace />;
@@ -222,7 +264,16 @@ const SellerDashboard = () => {
           <h1 className="font-display text-3xl">Seller Dashboard</h1>
           <p className="text-muted-foreground">Manage your products</p>
         </div>
-        <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+        <div className="flex gap-2">
+          {user && (
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/seller/${user.id}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-1" /> View Shop
+              </Link>
+            </Button>
+          )}
+          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
@@ -238,6 +289,9 @@ const SellerDashboard = () => {
           <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-1" /> Analytics</TabsTrigger>
           <TabsTrigger value="verification">
             <BadgeCheck className="h-4 w-4 mr-1 text-blue-500" /> Verification
+          </TabsTrigger>
+          <TabsTrigger value="profile">
+            <User className="h-4 w-4 mr-1" /> Profile
           </TabsTrigger>
         </TabsList>
 
@@ -425,6 +479,84 @@ const SellerDashboard = () => {
                 </form>
               </Card>
             )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="profile">
+          <div className="max-w-lg space-y-5">
+            <p className="text-sm text-muted-foreground">This information is shown on your public storefront.</p>
+            <form onSubmit={saveProfile} className="space-y-4">
+              <div>
+                <Label>Shop Name</Label>
+                <Input
+                  value={profileForm.shop_name}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, shop_name: e.target.value }))}
+                  placeholder="My Awesome Shop"
+                  maxLength={80}
+                />
+              </div>
+              <div>
+                <Label>Display Name</Label>
+                <Input
+                  value={profileForm.full_name}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
+                  placeholder="Your name"
+                  maxLength={80}
+                />
+              </div>
+              <div>
+                <Label>Shop Bio</Label>
+                <Textarea
+                  rows={4}
+                  maxLength={500}
+                  value={profileForm.bio}
+                  onChange={(e) => setProfileForm((f) => ({ ...f, bio: e.target.value }))}
+                  placeholder="Tell customers about your shop, what you sell, and what makes you unique…"
+                />
+                <p className="text-xs text-muted-foreground mt-1">{profileForm.bio.length}/500</p>
+              </div>
+              <div>
+                <Label>Shop Banner</Label>
+                {profileForm.banner_url ? (
+                  <div className="relative mt-1 rounded-xl overflow-hidden h-28 bg-muted">
+                    <img src={profileForm.banner_url} alt="Banner" className="w-full h-full object-cover" />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm"
+                      onClick={() => bannerInputRef.current?.click()}
+                    >
+                      <ImagePlus className="h-3.5 w-3.5 mr-1" /> Change
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-20 mt-1 border-dashed flex-col gap-1"
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={bannerUploading}
+                  >
+                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{bannerUploading ? "Uploading…" : "Upload banner image"}</span>
+                  </Button>
+                )}
+                <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button type="submit" variant="hero" disabled={profileSaving}>
+                  {profileSaving ? "Saving…" : "Save Profile"}
+                </Button>
+                {user && (
+                  <Button type="button" variant="outline" asChild>
+                    <Link to={`/seller/${user.id}`} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4 mr-1" /> Preview Shop
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            </form>
           </div>
         </TabsContent>
       </Tabs>

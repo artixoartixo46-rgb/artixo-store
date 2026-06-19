@@ -82,7 +82,7 @@ const ProductDetail = () => {
       }
 
       // Load seller profile
-      let sellerProfile: { fullName: string | null; shopName: string | null; isVerified: boolean } | null = null;
+      let sellerProfile: { fullName: string | null; shopName: string | null; isVerified: boolean; sellerId: string | null } | null = null;
       if (data.seller_id) {
         const { data: sData } = await (supabase as any)
           .from("profiles")
@@ -94,6 +94,7 @@ const ProductDetail = () => {
             fullName: sData.full_name ?? null,
             shopName: sData.shop_name ?? null,
             isVerified: sData.is_verified ?? false,
+            sellerId: data.seller_id,
           };
         }
       }
@@ -494,7 +495,16 @@ const ProductDetail = () => {
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-muted-foreground">Sold by</div>
                   <div className="font-semibold truncate flex items-center gap-1.5">
-                    <span className="truncate">{product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}</span>
+                    {product.sellerProfile?.sellerId ? (
+                      <Link
+                        to={`/seller/${product.sellerProfile.sellerId}`}
+                        className="truncate hover:text-primary transition-colors"
+                      >
+                        {product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}
+                      </Link>
+                    ) : (
+                      <span className="truncate">{product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}</span>
+                    )}
                     {product.sellerProfile?.isVerified && <VerifiedBadge size="sm" />}
                   </div>
                 </div>

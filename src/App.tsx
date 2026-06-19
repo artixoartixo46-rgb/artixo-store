@@ -24,6 +24,7 @@ import Settings from "./pages/Settings";
 import FitProfile from "./pages/FitProfile";
 import TryOn from "./pages/TryOn";
 import FitAnalysis from "./pages/FitAnalysis";
+import SellerStorefront from "./pages/SellerStorefront";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/become-seller" element={<BecomeSeller />} />
                 <Route path="/seller" element={<SellerDashboard />} />
+                <Route path="/seller/:id" element={<SellerStorefront />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/privacy" element={<Privacy />} />
                 <Route path="/refund-policy" element={<RefundPolicy />} />

@@ -42,27 +42,30 @@ const SellerStorefront = () => {
     if (!id) return;
     setLoading(true);
 
-    // Seller profile — use safe column set, handle optional columns
+    // Seller profile — select only guaranteed columns first
     const { data: prof } = await (supabase as any)
       .from("profiles")
-      .select("id, full_name, shop_name, shop_description, bio, banner_url, avatar_url, is_verified, email, created_at")
+      .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at")
       .eq("id", id)
       .maybeSingle();
 
-    if (!prof) {
-      // If maybeSingle returned null (could be RLS or error), try without optional cols
-      const { data: prof2 } = await (supabase as any)
-        .from("profiles")
-        .select("id, full_name, shop_name, shop_description, email, created_at")
-        .eq("id", id)
-        .maybeSingle();
-      if (!prof2) { setLoading(false); return; }
-      setSeller({ ...prof2, bio: prof2.shop_description ?? null, banner_url: null, avatar_url: null, is_verified: false });
-      setJoinedDate(prof2.created_at ? new Date(prof2.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
-    } else {
-      setSeller({ ...prof, bio: prof.bio ?? prof.shop_description ?? null });
-      setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
-    }
+    if (!prof) { setLoading(false); return; }
+
+    // Try to get optional columns (banner_url, is_verified may not exist on older DBs)
+    const { data: extra } = await (supabase as any)
+      .from("profiles")
+      .select("banner_url, is_verified, bio")
+      .eq("id", id)
+      .maybeSingle();
+
+    setSeller({
+      ...prof,
+      bio: extra?.bio ?? prof.shop_description ?? null,
+      banner_url: extra?.banner_url ?? null,
+      avatar_url: prof.avatar_url ?? null,
+      is_verified: extra?.is_verified ?? false,
+    });
+    setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
 
     // Products
     const { data: prods } = await supabase

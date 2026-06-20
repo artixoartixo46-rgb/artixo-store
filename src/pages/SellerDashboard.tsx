@@ -70,11 +70,11 @@ const SellerDashboard = () => {
     if (!user) return;
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("bio, banner_url, avatar_url, shop_name, full_name")
+      .select("shop_description, banner_url, avatar_url, shop_name, full_name")
       .eq("id", user.id)
       .maybeSingle();
     if (data) setProfileForm({
-      bio: data.bio ?? "",
+      bio: data.shop_description ?? data.bio ?? "",
       banner_url: data.banner_url ?? "",
       avatar_url: data.avatar_url ?? "",
       shop_name: data.shop_name ?? "",
@@ -87,16 +87,27 @@ const SellerDashboard = () => {
     if (!user) return;
     setProfileSaving(true);
     const payload: any = {
-      bio: profileForm.bio || null,
+      shop_description: profileForm.bio || null,
       shop_name: profileForm.shop_name || null,
       full_name: profileForm.full_name || null,
-      banner_url: profileForm.banner_url || null,
-      avatar_url: profileForm.avatar_url || null,
     };
-    const { error } = await (supabase as any)
+    // Try including banner_url + avatar_url (columns may not exist on older DBs)
+    if (profileForm.banner_url) payload.banner_url = profileForm.banner_url;
+    if (profileForm.avatar_url !== undefined) payload.avatar_url = profileForm.avatar_url || null;
+
+    let { error } = await (supabase as any)
       .from("profiles")
       .update(payload)
       .eq("id", user.id);
+
+    // If banner_url/avatar_url columns don't exist yet, retry without them
+    if (error && (error.message?.includes("banner_url") || error.message?.includes("avatar_url"))) {
+      const safePayload = { shop_description: payload.shop_description, shop_name: payload.shop_name, full_name: payload.full_name };
+      const { error: e2 } = await (supabase as any).from("profiles").update(safePayload).eq("id", user.id);
+      error = e2;
+      if (!e2) toast.success("Profile saved! (Run the DB migration to enable banner & photo)");
+    }
+
     setProfileSaving(false);
     if (error) {
       toast.error(error.message); return;

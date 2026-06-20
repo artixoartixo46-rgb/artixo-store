@@ -41,92 +41,82 @@ const SellerStorefront = () => {
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-
-    // Seller profile — select only guaranteed columns
-    const { data: prof } = await (supabase as any)
-      .from("profiles")
-      .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (!prof) { setLoading(false); return; }
-
-    // Find seller's banner from storage (search by seller ID prefix, newest first)
-    let bannerUrl: string | null = null;
-    const { data: bannerFiles } = await supabase.storage
-      .from("product-images")
-      .list("banners", { search: id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
-    if (bannerFiles && bannerFiles.length > 0) {
-      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
-      bannerUrl = pub.publicUrl;
-    }
-
-    // Try optional columns (is_verified may not exist on live DB yet)
-    const { data: extra } = await (supabase as any)
-      .from("profiles")
-      .select("is_verified")
-      .eq("id", id)
-      .maybeSingle();
-
-    setSeller({
-      ...prof,
-      bio: prof.shop_description ?? null,
-      banner_url: bannerUrl,
-      avatar_url: prof.avatar_url ?? null,
-      is_verified: extra?.is_verified ?? false,
-    });
-    setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
-
-    // Products
-    const { data: prods } = await supabase
-      .from("products")
-      .select("id, name, price, image_url, stock, is_trending, original_price, seller_id")
-      .eq("seller_id", id)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
-
-    setProducts((prods ?? []).map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      image_url: p.image_url ?? null,
-      stock: p.stock,
-      is_trending: p.is_trending ?? false,
-      original_price: p.original_price ?? null,
-      seller_id: p.seller_id ?? null,
-    })));
-
-    // Ratings from reviews table
-    const { data: reviews } = await (supabase as any)
-      .from("reviews")
-      .select("rating")
-      .in("product_id", (prods ?? []).map((p: any) => p.id));
-
-    if (reviews && reviews.length > 0) {
-      const ratings = reviews.map((r: any) => Number(r.rating));
-      setAvgRating(ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length);
-      setReviewCount(ratings.length);
-    }
-
-    // Followers (table may not exist yet — fail silently)
-    const folRes = await (supabase as any)
-      .from("seller_follows")
-      .select("id", { count: "exact", head: true })
-      .eq("seller_id", id);
-    if (!folRes.error) setFollowerCount(folRes.count ?? 0);
-
-    // Is current user following?
-    if (user && !folRes.error) {
-      const { data: fol } = await (supabase as any)
-        .from("seller_follows")
-        .select("id")
-        .eq("seller_id", id)
-        .eq("follower_id", user.id)
+    try {
+      // Seller profile — select only guaranteed columns
+      const { data: prof } = await (supabase as any)
+        .from("profiles")
+        .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at")
+        .eq("id", id)
         .maybeSingle();
-      setIsFollowing(!!fol);
-    }
 
-    setLoading(false);
+      if (!prof) return;
+
+      // Find seller's banner from storage (search by seller ID prefix, newest first)
+      let bannerUrl: string | null = null;
+      try {
+        const { data: bannerFiles } = await supabase.storage
+          .from("product-images")
+          .list("banners", { search: id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
+        if (bannerFiles && bannerFiles.length > 0) {
+          const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
+          bannerUrl = pub.publicUrl;
+        }
+      } catch (_) { /* banner optional */ }
+
+      // is_verified optional column
+      const { data: extra } = await (supabase as any)
+        .from("profiles").select("is_verified").eq("id", id).maybeSingle();
+
+      setSeller({
+        ...prof,
+        bio: prof.shop_description ?? null,
+        banner_url: bannerUrl,
+        avatar_url: prof.avatar_url ?? null,
+        is_verified: extra?.is_verified ?? false,
+      });
+      setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
+
+      // Products
+      const { data: prods } = await supabase
+        .from("products")
+        .select("id, name, price, image_url, stock, is_trending, original_price, seller_id")
+        .eq("seller_id", id).eq("status", "approved")
+        .order("created_at", { ascending: false });
+
+      setProducts((prods ?? []).map((p: any) => ({
+        id: p.id, name: p.name, price: p.price, image_url: p.image_url ?? null,
+        stock: p.stock, is_trending: p.is_trending ?? false,
+        original_price: p.original_price ?? null, seller_id: p.seller_id ?? null,
+      })));
+
+      // Ratings (skip if no products to avoid empty .in() error)
+      if (prods && prods.length > 0) {
+        const { data: reviews } = await (supabase as any)
+          .from("reviews").select("rating")
+          .in("product_id", prods.map((p: any) => p.id));
+        if (reviews && reviews.length > 0) {
+          const ratings = reviews.map((r: any) => Number(r.rating));
+          setAvgRating(ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length);
+          setReviewCount(ratings.length);
+        }
+      }
+
+      // Followers (table may not exist — fail silently)
+      const folRes = await (supabase as any)
+        .from("seller_follows").select("id", { count: "exact", head: true }).eq("seller_id", id);
+      if (!folRes.error) setFollowerCount(folRes.count ?? 0);
+
+      if (user && !folRes.error) {
+        const { data: fol } = await (supabase as any)
+          .from("seller_follows").select("id")
+          .eq("seller_id", id).eq("follower_id", user.id).maybeSingle();
+        setIsFollowing(!!fol);
+      }
+    } catch (e) {
+      console.error("Storefront load error:", e);
+    } finally {
+      setLoading(false);
+    }
   }, [id, user]);
 
   useEffect(() => { load(); }, [load]);

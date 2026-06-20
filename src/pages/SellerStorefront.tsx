@@ -51,8 +51,15 @@ const SellerStorefront = () => {
 
     if (!prof) { setLoading(false); return; }
 
-    // Banner URL derived from predictable storage path — no DB column needed
-    const { data: bannerPub } = supabase.storage.from("product-images").getPublicUrl(`banners/${id}`);
+    // Find seller's banner from storage (search by seller ID prefix, newest first)
+    let bannerUrl: string | null = null;
+    const { data: bannerFiles } = await supabase.storage
+      .from("product-images")
+      .list("banners", { search: id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
+    if (bannerFiles && bannerFiles.length > 0) {
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
+      bannerUrl = pub.publicUrl;
+    }
 
     // Try optional columns (is_verified may not exist on live DB yet)
     const { data: extra } = await (supabase as any)
@@ -64,7 +71,7 @@ const SellerStorefront = () => {
     setSeller({
       ...prof,
       bio: prof.shop_description ?? null,
-      banner_url: bannerPub.publicUrl,
+      banner_url: bannerUrl,
       avatar_url: prof.avatar_url ?? null,
       is_verified: extra?.is_verified ?? false,
     });

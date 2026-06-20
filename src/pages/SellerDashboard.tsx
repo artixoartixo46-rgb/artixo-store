@@ -68,8 +68,15 @@ const SellerDashboard = () => {
 
   const loadProfile = async () => {
     if (!user) return;
-    // Derive banner URL from predictable storage path (no DB column needed)
-    const { data: bannerPub } = supabase.storage.from("product-images").getPublicUrl(`banners/${user.id}`);
+    // Find the seller's latest banner from storage (no DB column needed)
+    let bannerUrl = "";
+    const { data: bannerFiles } = await supabase.storage
+      .from("product-images")
+      .list("banners", { search: user.id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
+    if (bannerFiles && bannerFiles.length > 0) {
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
+      bannerUrl = pub.publicUrl;
+    }
     const { data } = await (supabase as any)
       .from("profiles")
       .select("shop_description, avatar_url, shop_name, full_name")
@@ -77,7 +84,7 @@ const SellerDashboard = () => {
       .maybeSingle();
     if (data) setProfileForm({
       bio: data.shop_description ?? "",
-      banner_url: bannerPub.publicUrl,
+      banner_url: bannerUrl,
       avatar_url: data.avatar_url ?? "",
       shop_name: data.shop_name ?? "",
       full_name: data.full_name ?? "",
@@ -110,18 +117,13 @@ const SellerDashboard = () => {
   const uploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     setBannerUploading(true);
-    // Always save to the same path (fixed by user ID) — no DB column needed
-    const path = `banners/${user.id}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file, {
-      upsert: true,
-      contentType: file.type,
-    });
+    const ext = file.name.split(".").pop();
+    const path = `banners/${user.id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
     if (error) { toast.error(error.message); setBannerUploading(false); return; }
-    // Add cache-buster so the preview refreshes immediately
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
-    setProfileForm((f) => ({ ...f, banner_url: `${pub.publicUrl}?t=${Date.now()}` }));
+    setProfileForm((f) => ({ ...f, banner_url: pub.publicUrl }));
     setBannerUploading(false);
-    toast.success("Banner uploaded! Click Save to confirm.");
     e.target.value = "";
   };
 

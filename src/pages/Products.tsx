@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { SEO, SITE_URL } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 import { cachedQuery, TTL } from "@/lib/trafficManager";
 import { ProductCard, ProductCardData } from "@/components/ProductCard";
@@ -249,15 +249,7 @@ const Products = () => {
 
   return (
     <div className="container py-6">
-      <Helmet>
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
-        <link rel="canonical" href={`https://artixo.lovable.app${canonicalPath}`} />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content={`https://artixo.lovable.app${canonicalPath}`} />
-        <meta property="og:type" content="website" />
-      </Helmet>
+      <SEO title={pageTitle} description={pageDescription} canonical={canonicalPath} />
       <h1 className="font-display text-2xl md:text-3xl mb-1">
         {aiQuery ? "AI Search Results" : q ? `Search: "${q}"` : activeCat?.name ?? "All Products"}
       </h1>

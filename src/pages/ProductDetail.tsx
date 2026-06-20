@@ -29,6 +29,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ZoomIn } from "lucide-react";
 import { toast } from "sonner";
+import { SEO, buildProductSchema, orgSchema } from "@/components/SEO";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -214,8 +215,30 @@ const ProductDetail = () => {
     toast.success(wishlisted ? "Removed from wishlist" : "Added to wishlist");
   };
 
+  const productSchema = buildProductSchema({
+    id: product.id,
+    name: product.name,
+    description: product.description ?? undefined,
+    price: Number(product.price),
+    image: gallery,
+    brand: product.brand ?? undefined,
+    sku: product.sku ?? undefined,
+    stock: product.stock,
+    ratingValue: rating > 0 ? rating : undefined,
+    reviewCount: reviewCount > 0 ? reviewCount : undefined,
+    category: product.categories?.name ?? undefined,
+  });
+
   return (
     <div className="bg-muted/30 min-h-screen pb-24 md:pb-8">
+      <SEO
+        title={product.name}
+        description={product.description ? product.description.slice(0, 155) + (product.description.length > 155 ? "…" : "") : `Buy ${product.name} in Sri Lanka. Fast island-wide delivery on ARTIXO.`}
+        canonical={`/product/${product.id}`}
+        image={gallery[0]}
+        type="product"
+        schema={[productSchema, orgSchema]}
+      />
       {/* Breadcrumbs */}
       <div className="container pt-4">
         <nav className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">

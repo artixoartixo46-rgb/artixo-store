@@ -10,6 +10,7 @@ import { FlashSale } from "@/components/FlashSale";
 import { Newsletter } from "@/components/Newsletter";
 import { WhyShopWithUs } from "@/components/WhyShopWithUs";
 import { HeroBanner } from "@/components/HeroBanner";
+import { SEO, websiteSchema, orgSchema } from "@/components/SEO";
 
 interface Category { id: string; name: string; slug: string; icon: string | null; image_url: string | null; }
 
@@ -54,6 +55,10 @@ const Index = () => {
 
   return (
     <div>
+      <SEO
+        canonical="/"
+        schema={[websiteSchema, orgSchema]}
+      />
       {/* Hero */}
       <HeroBanner />
 

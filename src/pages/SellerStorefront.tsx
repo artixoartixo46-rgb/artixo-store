@@ -11,6 +11,7 @@ import {
   Store, Package, Star, Users, UserPlus, UserMinus, Calendar,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SEO } from "@/components/SEO";
 
 interface SellerProfile {
   id: string;
@@ -163,6 +164,12 @@ const SellerStorefront = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title={`${displayName} — ARTIXO Seller`}
+        description={seller.bio ? seller.bio.slice(0, 155) : `Shop from ${displayName} on ARTIXO — Sri Lanka's online marketplace. Verified seller with island-wide delivery.`}
+        canonical={`/seller/${seller.id}`}
+        image={seller.banner_url ?? undefined}
+      />
       {/* Banner */}
       <div
         className="w-full h-40 md:h-56 relative overflow-hidden bg-gradient-to-r from-primary/20 to-secondary/20"

@@ -2,10 +2,10 @@
 import { writeFileSync } from "fs";
 import { resolve } from "path";
 
-const BASE_URL = "https://artixo.lovable.app";
-const SUPABASE_URL = "https://jxqvonnunztkyyifazxd.supabase.co";
+const BASE_URL = "https://artixo.store";
+const SUPABASE_URL = "https://qzhcxtqkdcygzadcttyf.supabase.co";
 const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp4cXZvbm51bnp0a3l5aWZhenhkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NDc5NzAsImV4cCI6MjA5MjMyMzk3MH0.fxhcVW6T75KS8_IK0wZ94Nbri5dLLQHzkNpYAh_moGA";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGN4dHFrZGN5Z3phZGN0dHlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NTAxODMsImV4cCI6MjA5MjIyNjE4M30.Brb46MYivYOs2aHreLDxUczXahPPZar_yQfXu-YOtp4";
 
 interface SitemapEntry {
   path: string;

@@ -20,4 +20,4 @@ Disallow: /orders
 Disallow: /settings
 Disallow: /auth
 
-Sitemap: https://artixo.lovable.app/sitemap.xml
+Sitemap: https://artixo.store/sitemap.xml

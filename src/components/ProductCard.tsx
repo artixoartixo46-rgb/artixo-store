@@ -9,7 +9,6 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { useProductRating } from "@/components/ReviewSection";
 import { VerifiedBadge, useSellerVerified } from "@/components/VerifiedBadge";
-import { useTranslatedText } from "@/hooks/useTranslate";
 
 export interface ProductCardData {
   id: string;
@@ -29,7 +28,6 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
   const [added, setAdded] = useState(false);
   const { avg, count } = useProductRating(p.id);
   const isVerified = useSellerVerified(p.seller_id);
-  const displayName = useTranslatedText(p.name);
 
   const hasDiscount = p.original_price && Number(p.original_price) > Number(p.price);
   const discountPct = hasDiscount
@@ -79,7 +77,7 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
       <div className="p-3 space-y-2">
         <Link to={`/product/${p.id}`}>
           <h3 className="font-medium line-clamp-2 text-sm min-h-[2.5rem] hover:text-primary transition-smooth flex items-start gap-1">
-            <span>{displayName}</span>
+            <span>{p.name}</span>
             {isVerified && <VerifiedBadge size="sm" className="shrink-0 mt-0.5" />}
           </h3>
         </Link>

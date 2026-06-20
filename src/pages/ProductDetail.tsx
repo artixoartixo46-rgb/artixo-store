@@ -29,7 +29,6 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { ZoomIn } from "lucide-react";
 import { toast } from "sonner";
-import { useTranslatedBatch } from "@/hooks/useTranslate";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -45,8 +44,6 @@ const ProductDetail = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const { add } = useCart();
   const { avg: realAvg, count: realCount } = useProductRating(id ?? "");
-  // Tamil translation
-  const [tName, tDesc] = useTranslatedBatch([product?.name, product?.description]);
 
   useEffect(() => {
         if (!id) return;
@@ -234,7 +231,7 @@ const ProductDetail = () => {
             </>
           )}
           <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground line-clamp-1">{tName}</span>
+          <span className="text-foreground line-clamp-1">{product.name}</span>
         </nav>
       </div>
 
@@ -317,7 +314,7 @@ const ProductDetail = () => {
           {/* Details */}
           <Card className="p-5 space-y-4 bg-background">
             <div className="flex items-start justify-between gap-2">
-              <h1 className="font-display text-xl md:text-2xl leading-snug flex-1">{tName}</h1>
+              <h1 className="font-display text-xl md:text-2xl leading-snug flex-1">{product.name}</h1>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="icon" onClick={toggleWishlist}>
                   <Heart className={`h-5 w-5 ${wishlisted ? "fill-primary text-primary" : ""}`} />
@@ -386,7 +383,7 @@ const ProductDetail = () => {
             <div>
               <h3 className="font-semibold mb-2">Product Description</h3>
               <p className="text-sm text-muted-foreground whitespace-pre-line">
-                {tDesc || "No description provided."}
+                {product.description || "No description provided."}
               </p>
             </div>
 

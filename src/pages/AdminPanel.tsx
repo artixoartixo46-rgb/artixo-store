@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,6 +115,9 @@ const AdminPanel = () => {
   const [search, setSearch] = useState("");
   const [addSellerEmail, setAddSellerEmail] = useState("");
   const [addingsel, setAddingsel] = useState(false);
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const channelRef = useRef<any>(null);
 
   const refresh = async () => {
     const [pRes, aRes, oRes, uRes, rRes, oiRes, psRes, rrRes] = await Promise.all([
@@ -302,6 +305,86 @@ const AdminPanel = () => {
     refresh();
   };
 
+  // ── Chime sound via Web Audio API (no external file needed) ────────────────
+  const playChime = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const freqs = [523, 659, 784]; // C5, E5, G5
+      freqs.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
+        gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.15 + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.4);
+        osc.start(ctx.currentTime + i * 0.15);
+        osc.stop(ctx.currentTime + i * 0.15 + 0.45);
+      });
+    } catch {}
+  }, []);
+
+  // ── Browser push notification ────────────────────────────────────────────
+  const pushNotify = useCallback((order: any) => {
+    if (!("Notification" in window)) return;
+    const send = () => {
+      new Notification("🛒 New Order — ARTIXO", {
+        body: `Order #${order.order_number ?? order.id?.slice(0, 8)} • ${order.total_amount ? `LKR ${Number(order.total_amount).toLocaleString()}` : ""}`,
+        icon: "/icons/icon-192.png",
+        tag: "artixo-new-order",
+      });
+    };
+    if (Notification.permission === "granted") {
+      send();
+    } else if (Notification.permission !== "denied") {
+      Notification.requestPermission().then((p) => { if (p === "granted") send(); });
+    }
+  }, []);
+
+  // ── Request notification permission on admin load ────────────────────────
+  useEffect(() => {
+    if (roles.includes("admin") && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, [roles]);
+
+  // ── Supabase Realtime — subscribe to new orders ──────────────────────────
+  useEffect(() => {
+    if (!roles.includes("admin")) return;
+
+    const channel = supabase
+      .channel("admin-new-orders")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const order = payload.new as any;
+          // Play chime + browser notification
+          playChime();
+          pushNotify(order);
+          // In-app toast
+          toast.success(
+            `🛒 New order! #${order.order_number ?? order.id?.slice(0, 8)} — LKR ${Number(order.total_amount ?? order.total ?? 0).toLocaleString()}`,
+            {
+              duration: 8000,
+              action: { label: "View", onClick: () => setSection("orders") },
+            }
+          );
+          setNewOrderCount((c) => c + 1);
+          refresh();
+        }
+      )
+      .subscribe((status) => setLiveConnected(status === "SUBSCRIBED"));
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roles]);
+
   useEffect(() => {
     if (roles.includes("admin")) refresh();
   }, [roles]);
@@ -362,7 +445,10 @@ const AdminPanel = () => {
                 <Shield className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="group-data-[collapsible=icon]:hidden">
-                <div className="font-display font-bold text-white">Artixo Admin</div>
+                <div className="font-display font-bold text-white flex items-center gap-2">
+                  Artixo Admin
+                  {liveConnected && <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" title="Live" />}
+                </div>
                 <div className="text-xs text-white/50">Control Center</div>
               </div>
             </Link>
@@ -389,6 +475,9 @@ const AdminPanel = () => {
                         )}
                         {item.key === "pending" && pending.length > 0 && (
                           <Badge className="ml-auto h-5 px-1.5 bg-primary text-primary-foreground">{pending.length}</Badge>
+                        )}
+                        {item.key === "orders" && newOrderCount > 0 && (
+                          <Badge className="ml-auto h-5 px-1.5 bg-green-500 text-white animate-pulse">{newOrderCount}</Badge>
                         )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -547,6 +636,21 @@ const AdminPanel = () => {
 
             {section === "orders" && (
               <Card className="p-0 overflow-hidden">
+                {/* Live indicator + clear badge */}
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border/50 bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${liveConnected ? "bg-green-500 animate-pulse" : "bg-muted-foreground"}`} />
+                    <span className="text-xs text-muted-foreground">{liveConnected ? "Live updates on" : "Connecting..."}</span>
+                  </div>
+                  {newOrderCount > 0 && (
+                    <button
+                      onClick={() => setNewOrderCount(0)}
+                      className="text-xs text-green-600 font-medium hover:underline"
+                    >
+                      {newOrderCount} new order{newOrderCount > 1 ? "s" : ""} — mark seen
+                    </button>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>

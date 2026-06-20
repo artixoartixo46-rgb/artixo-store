@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { setSentryUser } from "@/lib/sentry";
 
 type Role = "admin" | "seller" | "customer" | "pending_seller";
 type RoleRow = { role: Role };
@@ -39,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     setSession(s);
     setUser(nextUser);
+    setSentryUser(nextUser?.id ?? null); // tag Sentry events with user ID
 
     if (!nextUser) {
       setRoles([]);

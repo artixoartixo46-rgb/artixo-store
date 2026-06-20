@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import { Layout } from "@/components/layout/Layout";
+import * as Sentry from "@sentry/react";
 
 // ── Route-based code splitting — each page loads only when visited ──────────
 const Index           = lazy(() => import("./pages/Index"));
@@ -59,7 +60,27 @@ const PageLoader = () => (
   </div>
 );
 
+// Fallback UI shown when an uncaught React error is captured by Sentry
+const SentryFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background p-8 text-center">
+    <div className="max-w-sm">
+      <div className="text-4xl mb-4">⚠️</div>
+      <h2 className="font-display text-2xl mb-2">Something went wrong</h2>
+      <p className="text-muted-foreground mb-6 text-sm">
+        Our team has been notified. Please refresh the page to continue.
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="bg-primary text-primary-foreground px-6 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        Refresh page
+      </button>
+    </div>
+  </div>
+);
+
 const App = () => (
+  <Sentry.ErrorBoundary fallback={<SentryFallback />} showDialog={false}>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -98,6 +119,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </Sentry.ErrorBoundary>
 );
 
 export default App;

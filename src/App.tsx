@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,26 +8,56 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
 import { Layout } from "@/components/layout/Layout";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Products from "./pages/Products";
-import ProductDetail from "./pages/ProductDetail";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Orders from "./pages/Orders";
-import BecomeSeller from "./pages/BecomeSeller";
-import SellerDashboard from "./pages/SellerDashboard";
-import AdminPanel from "./pages/AdminPanel";
-import Privacy from "./pages/Privacy";
-import RefundPolicy from "./pages/RefundPolicy";
-import NotFound from "./pages/NotFound";
-import Settings from "./pages/Settings";
-import FitProfile from "./pages/FitProfile";
-import TryOn from "./pages/TryOn";
-import FitAnalysis from "./pages/FitAnalysis";
-import SellerStorefront from "./pages/SellerStorefront";
 
-const queryClient = new QueryClient();
+// ── Route-based code splitting — each page loads only when visited ──────────
+const Index           = lazy(() => import("./pages/Index"));
+const Auth            = lazy(() => import("./pages/Auth"));
+const Products        = lazy(() => import("./pages/Products"));
+const ProductDetail   = lazy(() => import("./pages/ProductDetail"));
+const Cart            = lazy(() => import("./pages/Cart"));
+const Checkout        = lazy(() => import("./pages/Checkout"));
+const Orders          = lazy(() => import("./pages/Orders"));
+const BecomeSeller    = lazy(() => import("./pages/BecomeSeller"));
+const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
+const AdminPanel      = lazy(() => import("./pages/AdminPanel"));
+const Privacy         = lazy(() => import("./pages/Privacy"));
+const RefundPolicy    = lazy(() => import("./pages/RefundPolicy"));
+const Settings        = lazy(() => import("./pages/Settings"));
+const FitProfile      = lazy(() => import("./pages/FitProfile"));
+const TryOn           = lazy(() => import("./pages/TryOn"));
+const FitAnalysis     = lazy(() => import("./pages/FitAnalysis"));
+const SellerStorefront = lazy(() => import("./pages/SellerStorefront"));
+const NotFound        = lazy(() => import("./pages/NotFound"));
+
+// ── Optimised QueryClient — smart caching + retry for all Supabase calls ────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime:           1000 * 60 * 5,   // data stays fresh 5 min
+      gcTime:              1000 * 60 * 15,  // cache kept 15 min
+      retry:               2,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000), // exponential back-off
+      refetchOnWindowFocus: false,
+      refetchOnReconnect:   true,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
+
+// ── Lightweight full-page skeleton while a lazy chunk loads ─────────────────
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-primary/20" />
+        <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+      <p className="text-sm text-muted-foreground animate-pulse">Loading…</p>
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -36,30 +67,32 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SiteSettingsProvider>
-          <CartProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/orders" element={<Orders />} />
-                <Route path="/become-seller" element={<BecomeSeller />} />
-                <Route path="/seller" element={<SellerDashboard />} />
-                <Route path="/seller/:id" element={<SellerStorefront />} />
-                <Route path="/admin" element={<AdminPanel />} />
-                <Route path="/privacy" element={<Privacy />} />
-                <Route path="/refund-policy" element={<RefundPolicy />} />
-                                <Route path="/settings" element={<Settings />} />
-                <Route path="/fit-profile" element={<FitProfile />} />
-                <Route path="/product/:id/tryon" element={<TryOn />} />
-                <Route path="/product/:id/fit-analysis" element={<FitAnalysis />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          </CartProvider>
+            <CartProvider>
+              <Layout>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/"                       element={<Index />} />
+                    <Route path="/auth"                   element={<Auth />} />
+                    <Route path="/products"               element={<Products />} />
+                    <Route path="/product/:id"            element={<ProductDetail />} />
+                    <Route path="/cart"                   element={<Cart />} />
+                    <Route path="/checkout"               element={<Checkout />} />
+                    <Route path="/orders"                 element={<Orders />} />
+                    <Route path="/become-seller"          element={<BecomeSeller />} />
+                    <Route path="/seller"                 element={<SellerDashboard />} />
+                    <Route path="/seller/:id"             element={<SellerStorefront />} />
+                    <Route path="/admin"                  element={<AdminPanel />} />
+                    <Route path="/privacy"                element={<Privacy />} />
+                    <Route path="/refund-policy"          element={<RefundPolicy />} />
+                    <Route path="/settings"               element={<Settings />} />
+                    <Route path="/fit-profile"            element={<FitProfile />} />
+                    <Route path="/product/:id/tryon"      element={<TryOn />} />
+                    <Route path="/product/:id/fit-analysis" element={<FitAnalysis />} />
+                    <Route path="*"                       element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </Layout>
+            </CartProvider>
           </SiteSettingsProvider>
         </AuthProvider>
       </BrowserRouter>
@@ -68,5 +101,3 @@ const App = () => (
 );
 
 export default App;
-
-

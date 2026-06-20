@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
@@ -46,6 +46,10 @@ const SellerDashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [orderFilter, setOrderFilter] = useState<FilterKey>("all");
+
+  // Courier tracking state
+  const [trackingForm, setTrackingForm] = useState<{ orderId: string; courier: string; trackingNumber: string } | null>(null);
+  const [trackingSaving, setTrackingSaving] = useState(false);
 
   // Verification state
   const [verif, setVerif] = useState<any>(null);
@@ -186,9 +190,28 @@ const SellerDashboard = () => {
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    if (status === "shipped") {
+      setTrackingForm({ orderId, courier: "DHL", trackingNumber: "" });
+      return;
+    }
     const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order marked as ${status}`);
+    refreshOrders();
+  };
+
+  const saveTrackingAndShip = async () => {
+    if (!trackingForm) return;
+    setTrackingSaving(true);
+    const { error } = await supabase.from("orders").update({
+      status: "shipped",
+      courier: trackingForm.courier,
+      tracking_number: trackingForm.trackingNumber.trim() || null,
+    }).eq("id", trackingForm.orderId);
+    setTrackingSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Order marked as shipped with tracking info!");
+    setTrackingForm(null);
     refreshOrders();
   };
 
@@ -385,6 +408,13 @@ const SellerDashboard = () => {
                       <div className="space-y-1.5 text-sm pt-2 border-t">
                         <div className="flex items-start gap-2"><MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" /><span>{o.shipping_address}</span></div>
                         <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground shrink-0" /><span>{o.shipping_phone}</span></div>
+                        {o.tracking_number && (
+                          <div className="flex items-center gap-2 text-xs bg-muted/60 rounded px-2 py-1.5">
+                            <Truck className="h-3.5 w-3.5 text-primary shrink-0" />
+                            <span className="font-medium">{o.courier}:</span>
+                            <span className="font-mono">{o.tracking_number}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-3 border-t">
                         <span className="font-display font-bold text-primary">Your portion: {formatLKR(myTotal)}</span>
@@ -676,6 +706,45 @@ const SellerDashboard = () => {
               <Button type="submit" variant="hero" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update Product" : "Submit for Approval"}</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Courier Tracking Dialog — shown when seller selects "Shipped" */}
+      <Dialog open={!!trackingForm} onOpenChange={(o) => !o && setTrackingForm(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Truck className="h-5 w-5 text-primary" />Enter Courier Tracking Info</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <Label>Courier / Delivery Service</Label>
+              <Select value={trackingForm?.courier ?? "DHL"} onValueChange={(v) => setTrackingForm((f) => f ? { ...f, courier: v } : f)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DHL">DHL Sri Lanka</SelectItem>
+                  <SelectItem value="Domex">Domex Courier</SelectItem>
+                  <SelectItem value="Lanka Logistics">Lanka Logistics</SelectItem>
+                  <SelectItem value="Pronto">Pronto Delivery</SelectItem>
+                  <SelectItem value="Kapruka">Kapruka Logistics</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Tracking Number (Waybill)</Label>
+              <Input
+                className="mt-1 font-mono"
+                placeholder="e.g. 1234567890"
+                value={trackingForm?.trackingNumber ?? ""}
+                onChange={(e) => setTrackingForm((f) => f ? { ...f, trackingNumber: e.target.value } : f)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Leave blank if you don't have one yet</p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" className="flex-1" onClick={() => setTrackingForm(null)}>Cancel</Button>
+              <Button variant="hero" className="flex-1" disabled={trackingSaving} onClick={saveTrackingAndShip}>
+                {trackingSaving ? "Saving…" : <><Truck className="h-4 w-4 mr-1.5" />Mark as Shipped</>}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

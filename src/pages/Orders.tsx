@@ -8,11 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatLKR } from "@/lib/format";
-import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw, Truck, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SriLankaDeliveryMap } from "@/components/SriLankaDeliveryMap";
 import { toast } from "sonner";
+
+const COURIER_TRACKING_URLS: Record<string, string> = {
+  "DHL":              "https://www.dhl.com/lk-en/home/tracking.html?tracking-id=",
+  "Domex":            "https://domex.lk/tracking?waybill=",
+  "Lanka Logistics":  "https://www.lankalogistics.lk/tracking?waybill=",
+  "Kapruka":          "https://www.kapruka.com/track?id=",
+  "Pronto":           "https://pronto.lk/track?id=",
+};
+
+function getCourierUrl(courier: string, trackingNumber: string): string | null {
+  const base = COURIER_TRACKING_URLS[courier];
+  if (!base || !trackingNumber) return null;
+  return base + encodeURIComponent(trackingNumber);
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-muted text-muted-foreground",
@@ -150,6 +164,31 @@ const Orders = () => {
         </div>
 
         <OrderStatusTimeline status={o.status as OrderStatus} />
+
+        {/* Courier tracking banner */}
+        {o.tracking_number && (
+          <div className="flex items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-lg px-3 py-2.5 mb-3">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary shrink-0" />
+              <div>
+                <div className="text-xs text-muted-foreground">{o.courier} tracking</div>
+                <div className="font-mono text-sm font-medium">{o.tracking_number}</div>
+              </div>
+            </div>
+            {getCourierUrl(o.courier, o.tracking_number) && (
+              <a
+                href={getCourierUrl(o.courier, o.tracking_number)!}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Track Live
+                </Button>
+              </a>
+            )}
+          </div>
+        )}
 
         {o.status !== "cancelled" && (
           <div className="mb-3">

@@ -59,21 +59,24 @@ const SellerDashboard = () => {
   const [verifSaving, setVerifSaving] = useState(false);
 
   // Shop profile state
-  const [profileForm, setProfileForm] = useState({ bio: "", banner_url: "", shop_name: "", full_name: "" });
+  const [profileForm, setProfileForm] = useState({ bio: "", banner_url: "", avatar_url: "", shop_name: "", full_name: "" });
   const [profileSaving, setProfileSaving] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const bannerInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const loadProfile = async () => {
     if (!user) return;
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("shop_description, banner_url, shop_name, full_name")
+      .select("shop_description, banner_url, avatar_url, shop_name, full_name")
       .eq("id", user.id)
       .maybeSingle();
     if (data) setProfileForm({
       bio: data.shop_description ?? "",
       banner_url: data.banner_url ?? "",
+      avatar_url: data.avatar_url ?? "",
       shop_name: data.shop_name ?? "",
       full_name: data.full_name ?? "",
     });
@@ -90,6 +93,7 @@ const SellerDashboard = () => {
       full_name: profileForm.full_name || null,
     };
     if (profileForm.banner_url) payload.banner_url = profileForm.banner_url;
+    if (profileForm.avatar_url) payload.avatar_url = profileForm.avatar_url;
     const { error } = await (supabase as any)
       .from("profiles")
       .update(payload)
@@ -119,6 +123,19 @@ const SellerDashboard = () => {
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     setProfileForm((f) => ({ ...f, banner_url: pub.publicUrl }));
     setBannerUploading(false);
+    e.target.value = "";
+  };
+
+  const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !user) return;
+    setAvatarUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `avatars/${user.id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setAvatarUploading(false); return; }
+    const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+    setProfileForm((f) => ({ ...f, avatar_url: pub.publicUrl }));
+    setAvatarUploading(false);
     e.target.value = "";
   };
 
@@ -590,6 +607,36 @@ const SellerDashboard = () => {
                   placeholder="Tell customers about your shop, what you sell, and what makes you unique…"
                 />
                 <p className="text-xs text-muted-foreground mt-1">{profileForm.bio.length}/500</p>
+              </div>
+              <div>
+                <Label>Profile Picture</Label>
+                <div className="flex items-center gap-4 mt-1">
+                  <div className="h-20 w-20 rounded-2xl bg-primary/10 border-2 border-border overflow-hidden flex items-center justify-center shrink-0">
+                    {profileForm.avatar_url ? (
+                      <img src={profileForm.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-primary font-bold text-2xl">
+                        {(profileForm.full_name || profileForm.shop_name || "S")[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-col gap-1 h-16 px-6 border-dashed"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{avatarUploading ? "Uploading…" : "Upload photo"}</span>
+                  </Button>
+                  {profileForm.avatar_url && (
+                    <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setProfileForm((f) => ({ ...f, avatar_url: "" }))}>
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
               </div>
               <div>
                 <Label>Shop Banner</Label>

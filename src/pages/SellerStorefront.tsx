@@ -19,6 +19,7 @@ interface SellerProfile {
   shop_name: string | null;
   bio: string | null;
   banner_url: string | null;
+  avatar_url: string | null;
   is_verified: boolean;
   email: string | null;
 }
@@ -44,7 +45,7 @@ const SellerStorefront = () => {
     // Seller profile — use safe column set, handle optional columns
     const { data: prof } = await (supabase as any)
       .from("profiles")
-      .select("id, full_name, shop_name, shop_description, bio, banner_url, is_verified, email, created_at")
+      .select("id, full_name, shop_name, shop_description, bio, banner_url, avatar_url, is_verified, email, created_at")
       .eq("id", id)
       .maybeSingle();
 
@@ -56,7 +57,7 @@ const SellerStorefront = () => {
         .eq("id", id)
         .maybeSingle();
       if (!prof2) { setLoading(false); return; }
-      setSeller({ ...prof2, bio: prof2.shop_description ?? null, banner_url: null, is_verified: false });
+      setSeller({ ...prof2, bio: prof2.shop_description ?? null, banner_url: null, avatar_url: null, is_verified: false });
       setJoinedDate(prof2.created_at ? new Date(prof2.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
     } else {
       setSeller({ ...prof, bio: prof.bio ?? prof.shop_description ?? null });
@@ -186,8 +187,12 @@ const SellerStorefront = () => {
       <div className="container">
         <div className="relative -mt-12 mb-4 flex flex-col sm:flex-row sm:items-end gap-4">
           {/* Avatar */}
-          <div className="h-24 w-24 rounded-2xl bg-primary/10 border-4 border-background flex items-center justify-center text-primary font-display text-2xl font-bold shrink-0 shadow-sm">
-            {initials}
+          <div className="h-24 w-24 rounded-2xl border-4 border-background shrink-0 shadow-sm overflow-hidden bg-primary/10 flex items-center justify-center">
+            {seller.avatar_url ? (
+              <img src={seller.avatar_url} alt={displayName} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-primary font-display text-2xl font-bold">{initials}</span>
+            )}
           </div>
 
           {/* Name + actions */}

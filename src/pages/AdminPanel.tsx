@@ -18,11 +18,13 @@ import { toast } from "sonner";
 import {
   Package, Check, X, Shield, LayoutDashboard, ShoppingBag, Users, ClipboardList,
   TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush, BadgeCheck,
+  Bug, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Loader2,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { AdminProductsSection } from "@/components/admin/AdminProductsSection";
 import { AdminBannersSection } from "@/components/admin/AdminBannersSection";
 import { AdminCustomizeSection } from "@/components/admin/AdminCustomizeSection";
+import { AdminErrorMonitor } from "@/components/admin/AdminErrorMonitor";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileDown } from "lucide-react";
@@ -87,7 +89,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -99,6 +101,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "verifications", label: "Verifications", icon: BadgeCheck },
   { key: "returns", label: "Returns", icon: RotateCcw },
   { key: "customize", label: "Customize Site", icon: Paintbrush },
+  { key: "errors", label: "Error Monitor", icon: Bug },
 ];
 
 const AdminPanel = () => {
@@ -810,6 +813,37 @@ const AdminPanel = () => {
               </div>
             )}
 
+
+            {section === "returns" && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5 text-orange-500" /> Return &amp; Refund Requests
+                </h2>
+                {returnRequests.length === 0 ? (
+                  <Card className="p-12 text-center text-muted-foreground">
+                    <RotateCcw className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                    No return requests yet.
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {returnRequests.map((rr: any) => (
+                      <Card key={rr.id} className="p-4">
+                        <div className="flex items-start justify-between gap-4 flex-wrap">
+                          <div>
+                            <div className="font-medium text-sm">Order #{rr.order_id?.slice(0, 8).toUpperCase()}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{rr.reason ?? "No reason provided"}</div>
+                          </div>
+                          <Badge variant={rr.status === "pending" ? "outline" : rr.status === "approved" ? "success" : "destructive"}>
+                            {rr.status}
+                          </Badge>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {section === "verifications" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -883,6 +917,7 @@ const AdminPanel = () => {
                           <div className="flex gap-2 pt-1 border-t">
                             <Button size="sm" variant="outline" onClick={() => reviewVerif(vr, vr.status === "approved" ? "rejected" : "approved")}>
                               {vr.status === "approved" ? <><X className="h-3 w-3 mr-1" /> Revoke</> : <><Check className="h-3 w-3 mr-1" /> Approve</>}
+         
                             </Button>
                           </div>
                         )}
@@ -893,98 +928,13 @@ const AdminPanel = () => {
               </div>
             )}
 
-            {section === "returns" && (
-              <div className="space-y-4">
-                <h2 className="text-lg font-semibold">Return & Refund Requests</h2>
-                {returnRequests.length === 0 ? (
-                  <Card className="p-12 text-center text-muted-foreground">
-                    <RotateCcw className="h-10 w-10 mx-auto mb-2" />
-                    No return requests yet.
-                  </Card>
-                ) : (
-                  <Card className="p-0 overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Order ID</TableHead>
-                          <TableHead>Customer</TableHead>
-                          <TableHead>Reason</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {returnRequests.map((r: any) => (
-                          <TableRow key={r.id}>
-                            <TableCell className="font-mono text-xs">{r.orderId.slice(0, 8)}</TableCell>
-                            <TableCell>
-                              <div className="text-sm font-medium">{r.customerName}</div>
-                              <div className="text-xs text-muted-foreground">{r.customerEmail}</div>
-                            </TableCell>
-                            <TableCell className="max-w-xs">
-                              <p className="text-sm truncate" title={r.reason}>{r.reason}</p>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                              {r.createdAt.toLocaleDateString("en-LK")}
-                            </TableCell>
-                            <TableCell>
-                              {r.status === "pending" && (
-                                <Badge className="bg-orange-100 text-orange-700">Pending</Badge>
-                              )}
-                              {r.status === "approved" && (
-                                <Badge className="bg-green-100 text-green-700">Approved</Badge>
-                              )}
-                              {r.status === "rejected" && (
-                                <Badge className="bg-red-100 text-red-700">Rejected</Badge>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {r.status === "pending" && (
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="success" onClick={() => updateReturn(r.id, "approved")}>
-                                    <Check className="h-3 w-3 mr-1" /> Approve
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => updateReturn(r.id, "rejected")}>
-                                    <X className="h-3 w-3 mr-1" /> Reject
-                                  </Button>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Card>
-                )}
-              </div>
-            )}
+            {section === "errors" && <AdminErrorMonitor />}
+
           </main>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 };
 
-const StatCard = ({ label, value, sub, icon: Icon, accent }: { label: string; value: string; sub?: string; icon: any; accent?: string; }) => (
-  <Card className="p-5 relative overflow-hidden">
-    <div className="flex items-start justify-between">
-      <div className="min-w-0">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-        <p className="text-2xl font-bold mt-1 font-display truncate">{value}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-      </div>
-      <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${accent ?? "bg-muted"}`}>
-        <Icon className={`h-5 w-5 ${accent ? "text-primary-foreground" : "text-muted-foreground"}`} />
-      </div>
-    </div>
-  </Card>
-);
-
 export default AdminPanel;
-
-
-
-
-
-

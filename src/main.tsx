@@ -3,9 +3,14 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { initSentry } from "@/lib/sentry";
+import { installGlobalErrorHandlers } from "@/lib/errorReporter";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Init Sentry FIRST — before any other code runs
 initSentry();
+
+// Install global JS + Promise + Network error handlers
+installGlobalErrorHandlers();
 
 // Register service worker for PWA
 if ("serviceWorker" in navigator) {
@@ -19,6 +24,8 @@ if ("serviceWorker" in navigator) {
 
 createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
-    <App />
+    <ErrorBoundary section="App root">
+      <App />
+    </ErrorBoundary>
   </HelmetProvider>
 );

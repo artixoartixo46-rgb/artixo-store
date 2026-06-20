@@ -42,7 +42,7 @@ const SellerStorefront = () => {
     if (!id) return;
     setLoading(true);
 
-    // Seller profile — select only guaranteed columns first
+    // Seller profile — select only guaranteed columns
     const { data: prof } = await (supabase as any)
       .from("profiles")
       .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at")
@@ -51,17 +51,20 @@ const SellerStorefront = () => {
 
     if (!prof) { setLoading(false); return; }
 
-    // Try to get optional columns (banner_url, is_verified may not exist on older DBs)
+    // Banner URL derived from predictable storage path — no DB column needed
+    const { data: bannerPub } = supabase.storage.from("product-images").getPublicUrl(`banners/${id}`);
+
+    // Try optional columns (is_verified may not exist on live DB yet)
     const { data: extra } = await (supabase as any)
       .from("profiles")
-      .select("banner_url, is_verified, bio")
+      .select("is_verified")
       .eq("id", id)
       .maybeSingle();
 
     setSeller({
       ...prof,
-      bio: extra?.bio ?? prof.shop_description ?? null,
-      banner_url: extra?.banner_url ?? null,
+      bio: prof.shop_description ?? null,
+      banner_url: bannerPub.publicUrl,
       avatar_url: prof.avatar_url ?? null,
       is_verified: extra?.is_verified ?? false,
     });

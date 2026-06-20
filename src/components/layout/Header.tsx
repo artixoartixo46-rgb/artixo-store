@@ -39,16 +39,16 @@ export const Header = () => {
         <AiSearchBar />
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Language toggle */}
+          {/* Language toggle — always visible */}
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleLang}
-            className="h-8 px-2.5 text-xs font-semibold gap-1 hidden sm:flex"
+            className="h-8 px-2.5 text-xs font-semibold gap-1 flex"
             title={lang === "en" ? "Switch to Tamil" : "Switch to English"}
           >
             <span className="text-base leading-none">{lang === "en" ? "அ" : "A"}</span>
-            <span>{lang === "en" ? "தமிழ்" : "EN"}</span>
+            <span className="hidden sm:inline">{lang === "en" ? "தமிழ்" : "EN"}</span>
           </Button>
 
           {user && <NotificationBell />}

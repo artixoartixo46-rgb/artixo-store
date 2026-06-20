@@ -47,20 +47,30 @@ export function useTranslatedText(text: string | null | undefined): string {
 /** Reactively translate multiple strings in one Gemini call. */
 export function useTranslatedBatch(texts: (string | null | undefined)[]): string[] {
   const { isTamil } = useLanguage();
-  const normalized = texts.map((t) => t ?? "");
-  const [results, setResults] = useState<string[]>(normalized);
+  // Stable joined key — drives effect re-run when any text changes
+  const joinedKey = texts.join("\x00");
+  const [results, setResults] = useState<string[]>(() => texts.map((t) => t ?? ""));
   const keyRef = useRef<string>("");
 
   useEffect(() => {
-    const key = isTamil + "|" + normalized.join("||");
+    const normalized = texts.map((t) => t ?? "");
+    const key = (isTamil ? "1" : "0") + "|" + joinedKey;
     if (key === keyRef.current) return;
     keyRef.current = key;
 
-    if (!isTamil) { setResults(normalized); return; }
-    setResults(normalized); // show original immediately
-    translateBatch(normalized).then(setResults);
+    // Always update with current source texts first (instant)
+    setResults(normalized);
+    if (!isTamil) return;
+
+    // Skip if all texts are empty/trivial (product not loaded yet)
+    if (normalized.every((s) => !s || s.length < 2)) return;
+
+    translateBatch(normalized).then((translated) => {
+      // Only apply if the key is still current (no stale updates)
+      if (keyRef.current === key) setResults(translated);
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTamil, texts.join("|")]);
+  }, [isTamil, joinedKey]);
 
   return results;
 }

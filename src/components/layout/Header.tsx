@@ -11,16 +11,20 @@ import artixoLogo from "@/assets/artixo-logo.png";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { AiSearchBar } from "@/components/AiSearchBar";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export const Header = () => {
   const { user, roles, signOut } = useAuth();
   const { count } = useCart();
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
+  const { lang, setLang } = useLanguage();
   const logoSrc = settings.site_logo || artixoLogo;
 
   const isSeller = roles.includes("seller");
   const isAdmin = roles.includes("admin");
+
+  const toggleLang = () => setLang(lang === "en" ? "ta" : "en");
 
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
@@ -35,6 +39,18 @@ export const Header = () => {
         <AiSearchBar />
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Language toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLang}
+            className="h-8 px-2.5 text-xs font-semibold gap-1 hidden sm:flex"
+            title={lang === "en" ? "Switch to Tamil" : "Switch to English"}
+          >
+            <span className="text-base leading-none">{lang === "en" ? "அ" : "A"}</span>
+            <span>{lang === "en" ? "தமிழ்" : "EN"}</span>
+          </Button>
+
           {user && <NotificationBell />}
           {!isAdmin && (
             <Link to="/cart">
@@ -83,6 +99,12 @@ export const Header = () => {
                     )}
                   </>
                 )}
+                {/* Language toggle in mobile dropdown */}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={toggleLang} className="sm:hidden">
+                  <span className="mr-2 text-base">{lang === "en" ? "அ" : "A"}</span>
+                  {lang === "en" ? "Switch to தமிழ்" : "Switch to English"}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut}>
                   <LogOut className="h-4 w-4 mr-2" /> Sign out
@@ -99,4 +121,3 @@ export const Header = () => {
     </header>
   );
 };
-

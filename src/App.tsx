@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CartProvider } from "@/hooks/useCart";
 import { SiteSettingsProvider } from "@/hooks/useSiteSettings";
+import { LanguageProvider } from "@/hooks/useLanguage";
 import { Layout } from "@/components/layout/Layout";
 import * as Sentry from "@sentry/react";
 
@@ -81,6 +82,7 @@ const SentryFallback = () => (
 
 const App = () => (
   <Sentry.ErrorBoundary fallback={<SentryFallback />} showDialog={false}>
+  <LanguageProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -119,6 +121,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </LanguageProvider>
   </Sentry.ErrorBoundary>
 );
 

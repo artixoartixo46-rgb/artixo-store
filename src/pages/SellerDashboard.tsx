@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer } from "lucide-react";
+import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
@@ -170,7 +171,7 @@ const SellerDashboard = () => {
     if (!user) return;
     const { data: items, error } = await supabase
       .from("order_items")
-      .select("*, orders(id, status, created_at, shipping_address, shipping_phone, total_amount, notes)")
+      .select("*, orders(id, status, created_at, shipping_address, shipping_phone, total_amount, notes, tracking_number, courier, payment_method)")
       .eq("seller_id", user.id);
     if (error) return;
     const orderMap = new Map<string, any>();
@@ -417,7 +418,22 @@ const SellerDashboard = () => {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-3 border-t">
-                        <span className="font-display font-bold text-primary">Your portion: {formatLKR(myTotal)}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-display font-bold text-primary">Your portion: {formatLKR(myTotal)}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1.5 text-xs"
+                            onClick={() => generateShippingLabel({
+                              order: o,
+                              seller: { shopName: profileForm.shop_name || profileForm.full_name, phone: user?.email },
+                              items: o.my_items,
+                            })}
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            Print Label
+                          </Button>
+                        </div>
                         {o.status !== "delivered" && o.status !== "cancelled" && (
                           <div className="flex items-center gap-2">
                             <Label className="text-xs">Update status:</Label>

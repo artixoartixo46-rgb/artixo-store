@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatLKR } from "@/lib/format";
-import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw, Truck, ExternalLink } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw, Truck, ExternalLink, Wifi } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SriLankaDeliveryMap } from "@/components/SriLankaDeliveryMap";
@@ -48,6 +48,8 @@ const Orders = () => {
   const [returnedOrders, setReturnedOrders] = useState<Set<string>>(new Set());
   const [returnForm, setReturnForm] = useState<{ orderId: string; reason: string } | null>(null);
   const [submittingReturn, setSubmittingReturn] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(new Set());
 
   const loadOrders = async () => {
     if (!user) return;
@@ -81,23 +83,41 @@ const Orders = () => {
     loadOrders();
     loadReturnRequests();
 
-    // Realtime subscription for status updates
+    // Realtime — live order status updates (no refresh needed)
     const channel = supabase
-      .channel("orders-changes")
+      .channel(`orders-live-${user.id}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `customer_id=eq.${user.id}` },
         (payload) => {
+          const updated = payload.new as any;
           setOrders((prev) =>
-            prev.map((o) => (o.id === (payload.new as any).id ? { ...o, ...payload.new } : o))
+            prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o))
           );
-          toast.info(`Order #${String((payload.new as any).id).slice(0, 8)} -> ${(payload.new as any).status}`);
+          // Flash highlight for 3s
+          setRecentlyUpdated((prev) => new Set([...prev, updated.id]));
+          setTimeout(() => setRecentlyUpdated((prev) => { const n = new Set(prev); n.delete(updated.id); return n; }), 3000);
+
+          const statusLabels: Record<string, string> = {
+            pending: "⏳ Pending",
+            confirmed: "✅ Confirmed",
+            shipped: "🚚 Shipped",
+            delivered: "📦 Delivered!",
+            cancelled: "❌ Cancelled",
+          };
+          toast.success(
+            `Order #${String(updated.id).slice(0, 8).toUpperCase()} — ${statusLabels[updated.status] ?? updated.status}`,
+            { description: updated.tracking_number ? `Tracking: ${updated.courier} ${updated.tracking_number}` : undefined, duration: 5000 }
+          );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
       supabase.removeChannel(channel);
+      setRealtimeConnected(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -153,8 +173,9 @@ const Orders = () => {
     const orderItems: any[] = o.order_items ?? [];
     const alreadyRequested = returnedOrders.has(o.id);
     const isReturnFormOpen = returnForm?.orderId === o.id;
+    const justUpdated = recentlyUpdated.has(o.id);
     return (
-      <Card key={o.id} className="p-5">
+      <Card key={o.id} className={`p-5 transition-all duration-500 ${justUpdated ? "ring-2 ring-primary ring-offset-2" : ""}`}>
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
             <div className="text-xs text-muted-foreground">Order #{String(o.id).slice(0, 8)}</div>
@@ -299,7 +320,25 @@ const Orders = () => {
 
   return (
     <div className="container py-8 max-w-4xl">
-      <h1 className="font-display text-3xl mb-6">My Orders</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-3xl">My Orders</h1>
+        <div className="flex items-center gap-1.5 text-xs">
+          {realtimeConnected ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-green-600 font-medium">Live updates on</span>
+            </>
+          ) : (
+            <>
+              <Wifi className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">Connecting…</span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Track by ID */}
       <Card className="p-4 mb-6">

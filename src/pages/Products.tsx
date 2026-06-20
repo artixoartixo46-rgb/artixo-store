@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
+import { cachedQuery, TTL } from "@/lib/trafficManager";
 import { ProductCard, ProductCardData } from "@/components/ProductCard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,25 +51,31 @@ const Products = () => {
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
 
   useEffect(() => {
-        supabase.from("categories").select("*").order("name").then(({ data }) => {
-      if (data) setCategories(data as Category[]);
-    });
+    cachedQuery(
+      "categories:all",
+      () => supabase.from("categories").select("*").order("name").then(r => r.data ?? []),
+      TTL.CATEGORIES
+    ).then((data) => setCategories(data as Category[]));
   }, []);
 
   useEffect(() => {
         setLoading(true);
     (async () => {
-      // Fetch categories for slug→id mapping
-      const { data: catData } = await supabase.from("categories").select("*");
+      // Fetch categories for slug→id mapping (cached)
+      const catData = await cachedQuery(
+        "categories:all",
+        () => supabase.from("categories").select("*").then(r => r.data ?? []),
+        TTL.CATEGORIES
+      );
       const catBySlug: Record<string, string> = {};
       (catData ?? []).forEach((c: any) => { catBySlug[c.slug] = c.id; });
 
-      // Fetch approved products
-      const { data: prodData } = await supabase
-        .from("products")
-        .select("*")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
+      // Fetch approved products (cached 3 min)
+      const prodData = await cachedQuery(
+        "products:approved",
+        () => supabase.from("products").select("*").eq("status", "approved").order("created_at", { ascending: false }).then(r => r.data ?? []),
+        TTL.PRODUCTS
+      );
 
       let list = (prodData ?? []).map((d: any) => ({
         id: d.id,

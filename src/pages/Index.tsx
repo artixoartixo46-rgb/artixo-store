@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Truck, ShieldCheck, CreditCard, Headphones, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { cachedQuery, TTL } from "@/lib/trafficManager";
 import { ProductCard, ProductCardData } from "@/components/ProductCard";
 import { FlashSale } from "@/components/FlashSale";
 import { Newsletter } from "@/components/Newsletter";
@@ -19,36 +20,36 @@ const Index = () => {
   const [flashDeals, setFlashDeals] = useState<ProductCardData[]>([]);
 
   useEffect(() => {
-        // Load categories
-    supabase.from("categories").select("*").order("name").then(({ data }) => {
-      if (data) setCategories(data as Category[]);
-    });
+    // Load categories (cached 30 min — shared with Products page)
+    cachedQuery(
+      "categories:all",
+      () => supabase.from("categories").select("*").order("name").then(r => r.data ?? []),
+      TTL.CATEGORIES
+    ).then((data) => setCategories(data as Category[]));
 
-    // Load products
-    supabase
-      .from("products")
-      .select("*")
-      .eq("status", "approved")
-      .order("created_at", { ascending: false })
-      .limit(24)
-      .then(({ data }) => {
-        if (!data) return;
-        const all = data.map((d) => ({
-          id: d.id,
-          name: d.name,
-          price: d.price,
-          image_url: d.image_url ?? null,
-          stock: d.stock,
-          is_trending: d.is_trending ?? false,
-          original_price: d.original_price ?? null,
-          seller_id: (d as any).seller_id ?? null,
-        }));
-        setTrending(all.filter((p) => p.is_trending).slice(0, 12));
-        setNewArrivals(all.slice(0, 12));
-        setFlashDeals(
-          all.filter((p) => p.original_price && Number(p.original_price) > Number(p.price)).slice(0, 6)
-        );
-      });
+    // Load products (cached 3 min — shared with Products page)
+    cachedQuery(
+      "products:approved",
+      () => supabase.from("products").select("*").eq("status", "approved").order("created_at", { ascending: false }).limit(24).then(r => r.data ?? []),
+      TTL.PRODUCTS
+    ).then((data) => {
+      if (!data?.length) return;
+      const all = (data as any[]).map((d) => ({
+        id: d.id,
+        name: d.name,
+        price: d.price,
+        image_url: d.image_url ?? null,
+        stock: d.stock,
+        is_trending: d.is_trending ?? false,
+        original_price: d.original_price ?? null,
+        seller_id: d.seller_id ?? null,
+      }));
+      setTrending(all.filter((p) => p.is_trending).slice(0, 12));
+      setNewArrivals(all.slice(0, 12));
+      setFlashDeals(
+        all.filter((p) => p.original_price && Number(p.original_price) > Number(p.price)).slice(0, 6)
+      );
+    });
   }, []);
 
   return (

@@ -932,8 +932,8 @@ const AdminPanel = () => {
 
           </main>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 

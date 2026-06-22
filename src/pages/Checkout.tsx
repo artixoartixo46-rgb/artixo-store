@@ -27,6 +27,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
 import { sendPushToUser } from "@/hooks/usePushNotifications";
+import { getStoredReferral, clearStoredReferral } from "@/hooks/useReferral";
 
 // --- Stripe setup ---
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
@@ -250,6 +251,35 @@ const Checkout = () => {
       body: `Your order of ${formatLKR(total)} has been placed successfully!`,
       url: "/orders",
     }).catch(() => {});
+
+    // Referral conversion — credit the affiliate if order came via referral link
+    const refCode = getStoredReferral();
+    if (refCode) {
+      try {
+        const { data: aff } = await (supabase as any)
+          .from("affiliates")
+          .select("id, commission_rate, status, user_id")
+          .eq("referral_code", refCode)
+          .eq("status", "approved")
+          .maybeSingle();
+        if (aff && aff.user_id !== user.id) { // can't self-refer
+          const commission = Number((total * aff.commission_rate / 100).toFixed(2));
+          await (supabase as any).from("referral_conversions").insert({
+            affiliate_id: aff.id,
+            order_id: order.id,
+            order_amount: total,
+            commission_amount: commission,
+            status: "pending",
+          });
+          // Increment affiliate stats
+          await (supabase as any).from("affiliates").update({
+            total_conversions: aff.total_conversions + 1,
+            total_earnings: aff.total_earnings + commission,
+          } as any).eq("id", aff.id);
+          clearStoredReferral();
+        }
+      } catch { /* non-critical — don't block order */ }
+    }
   };
 
   const handleCOD = async () => {

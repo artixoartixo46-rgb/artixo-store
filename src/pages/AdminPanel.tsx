@@ -18,18 +18,20 @@ import { toast } from "sonner";
 import {
   Package, Check, X, Shield, LayoutDashboard, ShoppingBag, Users, ClipboardList,
   TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush, BadgeCheck,
-  Bug, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Loader2,
+  Bug, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Loader2, Gift, Banknote,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { AdminProductsSection } from "@/components/admin/AdminProductsSection";
 import { AdminBannersSection } from "@/components/admin/AdminBannersSection";
 import { AdminCustomizeSection } from "@/components/admin/AdminCustomizeSection";
 import { AdminErrorMonitor } from "@/components/admin/AdminErrorMonitor";
+import { AdminAffiliatesSection } from "@/components/admin/AdminAffiliatesSection";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { FileDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { Label } from "@/components/ui/label";
 
 const generateReceiptPDF = (order: any) => {
   const doc = new jsPDF();
@@ -89,7 +91,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -102,6 +104,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "returns", label: "Returns", icon: RotateCcw },
   { key: "customize", label: "Customize Site", icon: Paintbrush },
   { key: "errors", label: "Error Monitor", icon: Bug },
+  { key: "affiliates", label: "Affiliates", icon: Gift },
 ];
 
 const AdminPanel = () => {
@@ -929,6 +932,8 @@ const AdminPanel = () => {
             )}
 
             {section === "errors" && <AdminErrorMonitor />}
+
+            {section === "affiliates" && <AdminAffiliatesSection />}
 
           </main>
         </div>

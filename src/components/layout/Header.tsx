@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, LogOut, Store, Shield, Settings } from "lucide-react";
+import { ShoppingCart, User, LogOut, Store, Shield, Settings, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -83,6 +83,9 @@ export const Header = () => {
                         <Store className="h-4 w-4 mr-2" /> Become a Seller
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onClick={() => navigate("/affiliate")}>
+                      <Gift className="h-4 w-4 mr-2" /> Affiliate Program
+                    </DropdownMenuItem>
                   </>
                 )}
                 <DropdownMenuSeparator />

@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { useReferralCapture } from "@/hooks/useReferral";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -27,8 +28,12 @@ const Settings        = lazy(() => import("./pages/Settings"));
 const FitProfile      = lazy(() => import("./pages/FitProfile"));
 const TryOn           = lazy(() => import("./pages/TryOn"));
 const FitAnalysis     = lazy(() => import("./pages/FitAnalysis"));
-const SellerStorefront = lazy(() => import("./pages/SellerStorefront"));
-const NotFound        = lazy(() => import("./pages/NotFound"));
+const SellerStorefront   = lazy(() => import("./pages/SellerStorefront"));
+const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
+const NotFound           = lazy(() => import("./pages/NotFound"));
+
+// Capture ?ref= referral code on any page load
+function ReferralCapture() { useReferralCapture(); return null; }
 
 // ── Optimised QueryClient — smart caching + retry for all Supabase calls ────
 const queryClient = new QueryClient({
@@ -90,6 +95,7 @@ const App = () => (
           <SiteSettingsProvider>
             <CartProvider>
               <Layout>
+                <ReferralCapture />
                 <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/"                       element={<Index />} />
@@ -109,6 +115,7 @@ const App = () => (
                     <Route path="/fit-profile"            element={<FitProfile />} />
                     <Route path="/product/:id/tryon"      element={<TryOn />} />
                     <Route path="/product/:id/fit-analysis" element={<FitAnalysis />} />
+                    <Route path="/affiliate"              element={<AffiliateDashboard />} />
                     <Route path="*"                       element={<NotFound />} />
                   </Routes>
                 </Suspense>

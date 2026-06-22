@@ -528,4 +528,16 @@ const Checkout = () => {
                     <Truck className="h-3 w-3 text-blue-600" /> Island-wide delivery
                   </p>
                   <p className="flex items-center gap-1">
-                    <Banknote className="h-3 w-3 text-orange-600" />
+                    <Banknote className="h-3 w-3 text-orange-600" /> Cash on delivery available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Checkout;

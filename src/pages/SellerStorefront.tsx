@@ -42,10 +42,10 @@ const SellerStorefront = () => {
     if (!id) return;
     setLoading(true);
     try {
-      // Seller profile — read banner_url and is_verified from DB directly
+      // Seller profile — select * so we get all columns regardless of schema state
       const { data: prof } = await (supabase as any)
         .from("profiles")
-        .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at, banner_url, is_verified")
+        .select("*")
         .eq("id", id)
         .maybeSingle();
 

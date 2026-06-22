@@ -70,7 +70,7 @@ const SellerDashboard = () => {
     if (!user) return;
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("shop_description, avatar_url, shop_name, full_name, banner_url")
+      .select("*")
       .eq("id", user.id)
       .maybeSingle();
     if (data) setProfileForm({
@@ -123,8 +123,8 @@ const SellerDashboard = () => {
     if (error) { toast.error(error.message); setBannerUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     const bannerUrl = pub.publicUrl;
-    // Save banner_url to DB so storefront can read it reliably
-    await (supabase as any).from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id);
+    // Save banner_url to DB (column may not exist in older installs — ignore error)
+    try { await (supabase as any).from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id); } catch (_) {}
     setProfileForm((f) => ({ ...f, banner_url: bannerUrl }));
     setBannerUploading(false);
     toast.success("Banner updated!");
@@ -142,7 +142,7 @@ const SellerDashboard = () => {
         await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
       }
     } catch (_) { /* ignore */ }
-    await (supabase as any).from("profiles").update({ banner_url: null }).eq("id", user.id);
+    try { await (supabase as any).from("profiles").update({ banner_url: null }).eq("id", user.id); } catch (_) {}
     setProfileForm((f) => ({ ...f, banner_url: "" }));
     setBannerUploading(false);
     toast.success("Banner removed");

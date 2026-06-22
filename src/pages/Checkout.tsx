@@ -26,6 +26,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { supabase } from "@/integrations/supabase/client";
+import { sendPushToUser } from "@/hooks/usePushNotifications";
 
 // --- Stripe setup ---
 const STRIPE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
@@ -242,6 +243,13 @@ const Checkout = () => {
     supabase.functions
       .invoke("send-order-confirmation", { body: { order_id: order.id, is_update: false } })
       .catch((emailErr) => console.error("Confirmation email error:", emailErr));
+
+    // Push notification to buyer
+    sendPushToUser(user.id, {
+      title: "✅ Order Confirmed — ARTIXO",
+      body: `Your order of ${formatLKR(total)} has been placed successfully!`,
+      url: "/orders",
+    }).catch(() => {});
   };
 
   const handleCOD = async () => {

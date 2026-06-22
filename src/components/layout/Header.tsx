@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import artixoLogo from "@/assets/artixo-logo.png";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PushNotificationBell } from "@/components/PushNotificationBell";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { AiSearchBar } from "@/components/AiSearchBar";
 
@@ -36,6 +37,7 @@ export const Header = () => {
 
         <div className="flex items-center gap-1 sm:gap-2">
           {user && <NotificationBell />}
+          {user && <PushNotificationBell />}
           {!isAdmin && (
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">

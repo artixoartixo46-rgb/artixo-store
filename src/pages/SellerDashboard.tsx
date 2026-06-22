@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play } from "lucide-react";
+import { sendPushToUser } from "@/hooks/usePushNotifications";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
@@ -241,9 +242,24 @@ const SellerDashboard = () => {
       setTrackingForm({ orderId, courier: "DHL", trackingNumber: "" });
       return;
     }
+    const { data: ord } = await supabase.from("orders").select("customer_id").eq("id", orderId).maybeSingle() as any;
     const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order marked as ${status}`);
+    // Push notification to buyer
+    if (ord?.customer_id) {
+      const statusMsg: Record<string, string> = {
+        confirmed: "Your order has been confirmed! 🎉",
+        shipped: "Your order is on its way! 🚚",
+        delivered: "Your order has been delivered! ✅",
+        cancelled: "Your order has been cancelled.",
+      };
+      sendPushToUser(ord.customer_id, {
+        title: "Order Update — ARTIXO",
+        body: statusMsg[status] ?? `Order status: ${status}`,
+        url: "/orders",
+      }).catch(() => {});
+    }
     refreshOrders();
   };
 

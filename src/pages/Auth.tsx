@@ -18,18 +18,27 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [callbackTimedOut, setCallbackTimedOut] = useState(false);
 
   const redirectTo = searchParams.get("redirect") || "/";
   const safeRedirect = redirectTo.startsWith("/") && !redirectTo.startsWith("//") ? redirectTo : "/";
+
+  const isOAuthCallback =
+    !callbackTimedOut && (window.location.search.includes("code=") || window.location.hash.includes("access_token"));
 
   useEffect(() => {
     if (window.location.hash.includes("error")) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
+    // If there's an OAuth code but it doesn't resolve in 5s, clear it and show the login form
+    if (window.location.search.includes("code=") || window.location.hash.includes("access_token")) {
+      const t = setTimeout(() => {
+        window.history.replaceState(null, "", window.location.pathname);
+        setCallbackTimedOut(true);
+      }, 5000);
+      return () => clearTimeout(t);
+    }
   }, []);
-
-  const isOAuthCallback =
-    window.location.search.includes("code=") || window.location.hash.includes("access_token");
 
   if (authLoading || isOAuthCallback) {
     return (

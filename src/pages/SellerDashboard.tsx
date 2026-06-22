@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X } from "lucide-react";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
@@ -117,6 +117,15 @@ const SellerDashboard = () => {
   const uploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     setBannerUploading(true);
+    // Delete old banner files for this seller before uploading new one
+    try {
+      const { data: oldFiles } = await supabase.storage
+        .from("product-images")
+        .list("banners", { search: user.id });
+      if (oldFiles && oldFiles.length > 0) {
+        await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
+      }
+    } catch (_) { /* ignore cleanup errors */ }
     const ext = file.name.split(".").pop();
     const path = `banners/${user.id}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
@@ -124,19 +133,40 @@ const SellerDashboard = () => {
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     setProfileForm((f) => ({ ...f, banner_url: pub.publicUrl }));
     setBannerUploading(false);
+    toast.success("Banner updated!");
     e.target.value = "";
+  };
+
+  const removeBanner = async () => {
+    if (!user) return;
+    setBannerUploading(true);
+    try {
+      const { data: oldFiles } = await supabase.storage
+        .from("product-images")
+        .list("banners", { search: user.id });
+      if (oldFiles && oldFiles.length > 0) {
+        await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
+      }
+    } catch (_) { /* ignore */ }
+    setProfileForm((f) => ({ ...f, banner_url: "" }));
+    setBannerUploading(false);
+    toast.success("Banner removed");
   };
 
   const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     setAvatarUploading(true);
     const ext = file.name.split(".").pop();
-    const path = `avatars/${user.id}-${Date.now()}.${ext}`;
+    const path = `avatars/${user.id}.${ext}`;  // Overwrite same file each time
     const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
     if (error) { toast.error(error.message); setAvatarUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
-    setProfileForm((f) => ({ ...f, avatar_url: pub.publicUrl }));
+    const avatarUrl = `${pub.publicUrl}?t=${Date.now()}`; // Cache bust
+    setProfileForm((f) => ({ ...f, avatar_url: avatarUrl }));
+    // Auto-save avatar_url to DB immediately
+    await (supabase as any).from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
     setAvatarUploading(false);
+    toast.success("Profile photo updated!");
     e.target.value = "";
   };
 
@@ -577,26 +607,157 @@ const SellerDashboard = () => {
         </TabsContent>
 
         <TabsContent value="profile">
-          <div className="max-w-lg space-y-5">
-            <p className="text-sm text-muted-foreground">This information is shown on your public storefront.</p>
-            <form onSubmit={saveProfile} className="space-y-4">
-              <div>
-                <Label>Shop Name</Label>
-                <Input
-                  value={profileForm.shop_name}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, shop_name: e.target.value }))}
-                  placeholder="My Awesome Shop"
-                  maxLength={80}
-                />
+          <div className="max-w-xl space-y-6">
+            <p className="text-sm text-muted-foreground">This info is shown on your public storefront.</p>
+
+            {/* ── BANNER SECTION ── */}
+            <div>
+              <Label className="text-sm font-semibold mb-2 block">Shop Banner</Label>
+              <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-primary/20 to-secondary/20 border border-border"
+                style={{ height: "140px" }}>
+                {profileForm.banner_url ? (
+                  <img src={profileForm.banner_url} alt="Banner" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                    <ImagePlus className="h-8 w-8 opacity-40" />
+                    <span className="text-xs opacity-60">No banner yet</span>
+                  </div>
+                )}
+                {/* Overlay buttons */}
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 hover:bg-black/20 transition-all group">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="opacity-0 group-hover:opacity-100 transition-all shadow-lg gap-1.5"
+                    onClick={() => bannerInputRef.current?.click()}
+                    disabled={bannerUploading}
+                  >
+                    {bannerUploading ? (
+                      <><div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" /><span>Uploading…</span></>
+                    ) : (
+                      <><Camera className="h-3.5 w-3.5" />{profileForm.banner_url ? "Change Banner" : "Upload Banner"}</>
+                    )}
+                  </Button>
+                  {profileForm.banner_url && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="opacity-0 group-hover:opacity-100 transition-all shadow-lg gap-1.5"
+                      onClick={removeBanner}
+                      disabled={bannerUploading}
+                    >
+                      <X className="h-3.5 w-3.5" /> Remove
+                    </Button>
+                  )}
+                </div>
+                {/* Always-visible change button for mobile */}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm text-xs gap-1.5"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={bannerUploading}
+                >
+                  {bannerUploading ? "Uploading…" : <><Camera className="h-3 w-3" />{profileForm.banner_url ? "Change" : "Upload"}</>}
+                </Button>
               </div>
-              <div>
-                <Label>Display Name</Label>
-                <Input
-                  value={profileForm.full_name}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
-                  placeholder="Your name"
-                  maxLength={80}
-                />
+              <p className="text-xs text-muted-foreground mt-1.5">Recommended: 1200×400px. JPG or PNG.</p>
+              <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} />
+            </div>
+
+            {/* ── AVATAR SECTION ── */}
+            <div>
+              <Label className="text-sm font-semibold mb-2 block">Profile Photo</Label>
+              <div className="flex items-center gap-5">
+                {/* Clickable avatar */}
+                <div
+                  className="relative h-24 w-24 rounded-2xl bg-primary/10 border-2 border-border overflow-hidden flex items-center justify-center shrink-0 cursor-pointer group"
+                  onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+                  title="Click to change profile photo"
+                >
+                  {profileForm.avatar_url ? (
+                    <img src={profileForm.avatar_url} alt="Profile" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-primary font-bold text-3xl">
+                      {(profileForm.full_name || profileForm.shop_name || "S")[0].toUpperCase()}
+                    </span>
+                  )}
+                  {/* Camera overlay on hover */}
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    {avatarUploading ? (
+                      <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    ) : (
+                      <>
+                        <Camera className="h-5 w-5 text-white" />
+                        <span className="text-white text-[10px] font-medium">Change</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? (
+                      <><div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" /> Uploading…</>
+                    ) : (
+                      <><Camera className="h-4 w-4" /> Upload Photo</>
+                    )}
+                  </Button>
+                  {profileForm.avatar_url && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground gap-1.5 justify-start"
+                      onClick={async () => {
+                        setProfileForm((f) => ({ ...f, avatar_url: "" }));
+                        if (user) await (supabase as any).from("profiles").update({ avatar_url: null }).eq("id", user.id);
+                        toast.success("Profile photo removed");
+                      }}
+                    >
+                      <X className="h-3 w-3" /> Remove photo
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground">JPG, PNG, WebP. Max 5MB.</p>
+                </div>
+              </div>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
+            </div>
+
+            <Separator />
+
+            {/* ── PROFILE FORM ── */}
+            <form onSubmit={saveProfile} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Shop Name</Label>
+                  <Input
+                    value={profileForm.shop_name}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, shop_name: e.target.value }))}
+                    placeholder="My Awesome Shop"
+                    maxLength={80}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Display Name</Label>
+                  <Input
+                    value={profileForm.full_name}
+                    onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
+                    placeholder="Your full name"
+                    maxLength={80}
+                    className="mt-1"
+                  />
+                </div>
               </div>
               <div>
                 <Label>Shop Bio</Label>
@@ -606,67 +767,9 @@ const SellerDashboard = () => {
                   value={profileForm.bio}
                   onChange={(e) => setProfileForm((f) => ({ ...f, bio: e.target.value }))}
                   placeholder="Tell customers about your shop, what you sell, and what makes you unique…"
+                  className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">{profileForm.bio.length}/500</p>
-              </div>
-              <div>
-                <Label>Profile Picture</Label>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="h-20 w-20 rounded-2xl bg-primary/10 border-2 border-border overflow-hidden flex items-center justify-center shrink-0">
-                    {profileForm.avatar_url ? (
-                      <img src={profileForm.avatar_url} alt="Profile" className="h-full w-full object-cover" />
-                    ) : (
-                      <span className="text-primary font-bold text-2xl">
-                        {(profileForm.full_name || profileForm.shop_name || "S")[0].toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-col gap-1 h-16 px-6 border-dashed"
-                    onClick={() => avatarInputRef.current?.click()}
-                    disabled={avatarUploading}
-                  >
-                    <ImagePlus className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{avatarUploading ? "Uploading…" : "Upload photo"}</span>
-                  </Button>
-                  {profileForm.avatar_url && (
-                    <Button type="button" variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setProfileForm((f) => ({ ...f, avatar_url: "" }))}>
-                      Remove
-                    </Button>
-                  )}
-                </div>
-                <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
-              </div>
-              <div>
-                <Label>Shop Banner</Label>
-                {profileForm.banner_url ? (
-                  <div className="relative mt-1 rounded-xl overflow-hidden h-28 bg-muted">
-                    <img src={profileForm.banner_url} alt="Banner" className="w-full h-full object-cover" />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="absolute bottom-2 right-2 bg-background/80 backdrop-blur-sm"
-                      onClick={() => bannerInputRef.current?.click()}
-                    >
-                      <ImagePlus className="h-3.5 w-3.5 mr-1" /> Change
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-20 mt-1 border-dashed flex-col gap-1"
-                    onClick={() => bannerInputRef.current?.click()}
-                    disabled={bannerUploading}
-                  >
-                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{bannerUploading ? "Uploading…" : "Upload banner image"}</span>
-                  </Button>
-                )}
-                <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} />
               </div>
               <div className="flex gap-2 pt-1">
                 <Button type="submit" variant="hero" disabled={profileSaving}>

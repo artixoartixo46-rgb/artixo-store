@@ -42,37 +42,21 @@ const SellerStorefront = () => {
     if (!id) return;
     setLoading(true);
     try {
-      // Seller profile — select only guaranteed columns
+      // Seller profile — read banner_url and is_verified from DB directly
       const { data: prof } = await (supabase as any)
         .from("profiles")
-        .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at")
+        .select("id, full_name, shop_name, shop_description, avatar_url, email, created_at, banner_url, is_verified")
         .eq("id", id)
         .maybeSingle();
 
       if (!prof) return;
 
-      // Find seller's banner from storage (search by seller ID prefix, newest first)
-      let bannerUrl: string | null = null;
-      try {
-        const { data: bannerFiles } = await supabase.storage
-          .from("product-images")
-          .list("banners", { search: id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
-        if (bannerFiles && bannerFiles.length > 0) {
-          const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
-          bannerUrl = pub.publicUrl;
-        }
-      } catch (_) { /* banner optional */ }
-
-      // is_verified optional column
-      const { data: extra } = await (supabase as any)
-        .from("profiles").select("is_verified").eq("id", id).maybeSingle();
-
       setSeller({
         ...prof,
         bio: prof.shop_description ?? null,
-        banner_url: bannerUrl,
+        banner_url: prof.banner_url ?? null,
         avatar_url: prof.avatar_url ?? null,
-        is_verified: extra?.is_verified ?? false,
+        is_verified: prof.is_verified ?? false,
       });
       setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
 

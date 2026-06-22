@@ -68,23 +68,14 @@ const SellerDashboard = () => {
 
   const loadProfile = async () => {
     if (!user) return;
-    // Find the seller's latest banner from storage (no DB column needed)
-    let bannerUrl = "";
-    const { data: bannerFiles } = await supabase.storage
-      .from("product-images")
-      .list("banners", { search: user.id, limit: 1, sortBy: { column: "created_at", order: "desc" } });
-    if (bannerFiles && bannerFiles.length > 0) {
-      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(`banners/${bannerFiles[0].name}`);
-      bannerUrl = pub.publicUrl;
-    }
     const { data } = await (supabase as any)
       .from("profiles")
-      .select("shop_description, avatar_url, shop_name, full_name")
+      .select("shop_description, avatar_url, shop_name, full_name, banner_url")
       .eq("id", user.id)
       .maybeSingle();
     if (data) setProfileForm({
       bio: data.shop_description ?? "",
-      banner_url: bannerUrl,
+      banner_url: data.banner_url ?? "",
       avatar_url: data.avatar_url ?? "",
       shop_name: data.shop_name ?? "",
       full_name: data.full_name ?? "",
@@ -131,7 +122,10 @@ const SellerDashboard = () => {
     const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
     if (error) { toast.error(error.message); setBannerUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
-    setProfileForm((f) => ({ ...f, banner_url: pub.publicUrl }));
+    const bannerUrl = pub.publicUrl;
+    // Save banner_url to DB so storefront can read it reliably
+    await (supabase as any).from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id);
+    setProfileForm((f) => ({ ...f, banner_url: bannerUrl }));
     setBannerUploading(false);
     toast.success("Banner updated!");
     e.target.value = "";
@@ -148,6 +142,7 @@ const SellerDashboard = () => {
         await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
       }
     } catch (_) { /* ignore */ }
+    await (supabase as any).from("profiles").update({ banner_url: null }).eq("id", user.id);
     setProfileForm((f) => ({ ...f, banner_url: "" }));
     setBannerUploading(false);
     toast.success("Banner removed");

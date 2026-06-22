@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play } from "lucide-react";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
@@ -34,6 +34,7 @@ const emptyForm = {
   category_id: "", image_url: "", brand: "", sku: "",
   images: [] as string[],
   sizes: "",
+  video_url: "",
 };
 
 const SellerDashboard = () => {
@@ -45,7 +46,9 @@ const SellerDashboard = () => {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [videoUploading, setVideoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [orderFilter, setOrderFilter] = useState<FilterKey>("all");
 
   // Courier tracking state
@@ -280,6 +283,7 @@ const SellerDashboard = () => {
       image_url: p.image_url ?? "", brand: p.brand ?? "", sku: p.sku ?? "",
       images: Array.isArray(p.images) ? p.images : [],
       sizes: Array.isArray(v.sizes) ? v.sizes.join(", ") : "",
+      video_url: typeof v.video_url === "string" ? v.video_url : "",
     });
     setOpen(true);
   };
@@ -325,6 +329,22 @@ const SellerDashboard = () => {
 
   const removeGalleryImage = (idx: number) => setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
 
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !user) return;
+    const maxMB = 50;
+    if (file.size > maxMB * 1024 * 1024) { toast.error(`Video must be under ${maxMB}MB`); return; }
+    setVideoUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `videos/${user.id}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setVideoUploading(false); return; }
+    const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+    setForm((f) => ({ ...f, video_url: pub.publicUrl }));
+    setVideoUploading(false);
+    toast.success("Video uploaded!");
+    e.target.value = "";
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); if (!user) return;
     const priceNum = parseFloat(form.price);
@@ -337,7 +357,7 @@ const SellerDashboard = () => {
       price: priceNum, original_price: origNum, stock: parseInt(form.stock),
       category_id: form.category_id || null, image_url: form.image_url || form.images[0] || null,
       images: form.images, brand: form.brand || null, sku: form.sku || null,
-      variants: { sizes: sizesArr },
+      variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
     };
     const { error } = editing
       ? await supabase.from("products").update(payload).eq("id", editing.id)
@@ -863,6 +883,64 @@ const SellerDashboard = () => {
                 </div>
               )}
             </div>
+
+            {/* ── VIDEO SECTION ── */}
+            <Separator />
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Film className="h-4 w-4 text-primary" />
+                <Label>Product Demo Video</Label>
+                <span className="text-xs text-muted-foreground">(optional)</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Upload an MP4 (max 50MB) or paste a YouTube link. Buyers can watch the demo on the product page.</p>
+
+              {/* Preview */}
+              {form.video_url && (
+                <div className="mb-3 relative rounded-xl overflow-hidden bg-black border" style={{ height: "160px" }}>
+                  {form.video_url.includes("youtube") || form.video_url.includes("youtu.be") ? (
+                    <iframe
+                      src={form.video_url.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").replace("shorts/", "embed/")}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title="Video preview"
+                    />
+                  ) : (
+                    <video src={form.video_url} controls className="w-full h-full" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, video_url: "" }))}
+                    className="absolute top-1.5 right-1.5 bg-destructive text-destructive-foreground rounded-full p-1 shadow"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Upload button */}
+              {!form.video_url && (
+                <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-muted transition-smooth mb-2">
+                  {videoUploading ? (
+                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading video…</span></>
+                  ) : (
+                    <><Play className="h-4 w-4 text-primary" /><span className="text-sm">Upload video file (MP4, MOV, WebM)</span></>
+                  )}
+                  <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} disabled={videoUploading} />
+                </label>
+              )}
+
+              {/* YouTube URL input */}
+              <div>
+                <Label className="text-xs text-muted-foreground">Or paste YouTube / video URL</Label>
+                <Input
+                  className="mt-1"
+                  placeholder="https://youtube.com/watch?v=... or direct MP4 URL"
+                  value={form.video_url}
+                  onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
+                />
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" variant="hero" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update Product" : "Submit for Approval"}</Button>

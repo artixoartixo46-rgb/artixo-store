@@ -189,7 +189,7 @@ const ProductDetail = () => {
   const colorsArr: { name: string; image: string }[] = Array.isArray(rawVariants.colors)
     ? rawVariants.colors.map((c: any) => typeof c === "string" ? { name: c, image: "" } : c)
     : [];
-  const videoUrl: string = typeof rawVariants.video_url === "string" ? rawVariants.video_url : "";
+  const videoUrl: string = typeof rawVariants.video_url === "string" ? rawVariants.video_url : (typeof product.video_url === "string" ? product.video_url : "");
   const isYouTube = videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be");
   const embedUrl = isYouTube
     ? videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").replace("shorts/", "embed/")
@@ -303,10 +303,12 @@ const ProductDetail = () => {
                 {videoUrl && (
                   <button
                     onClick={() => setActiveImage("__video__")}
-                    className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-smooth relative bg-black flex items-center justify-center ${activeImage === "__video__" ? "border-primary" : "border-transparent hover:border-muted-foreground/40"}`}
+                    className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-smooth relative bg-gradient-to-br from-primary/80 to-primary flex flex-col items-center justify-center gap-0.5 ${activeImage === "__video__" ? "border-primary" : "border-transparent hover:border-primary/60"}`}
                   >
-                    <Package className="h-6 w-6 text-white/70" />
-                    <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] text-white/80 font-medium">VIDEO</span>
+                    <div className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center">
+                      <Zap className="h-4 w-4 text-white fill-white" />
+                    </div>
+                    <span className="text-[9px] text-white/90 font-bold tracking-wide">VIDEO</span>
                   </button>
                 )}
                 {gallery.map((url, i) => (

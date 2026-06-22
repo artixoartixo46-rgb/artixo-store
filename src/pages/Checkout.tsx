@@ -153,7 +153,7 @@ const StripeCardForm = ({ total, onPaymentSuccess, loading, setLoading }: Stripe
 
 // --- Main Checkout Component ---
 const Checkout = () => {
-  const { items: cartItems, clear } = useCart();
+  const { items: cartItems, loading: cartLoading, clear } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -175,6 +175,11 @@ const Checkout = () => {
   }, [user]);
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (cartLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center text-muted-foreground">Loading cart…</div>
+    </div>
+  );
   if (cartItems.length === 0) return <Navigate to="/cart" replace />;
 
   const subtotal = cartItems.reduce((s, i) => s + (i.product?.price || 0) * i.quantity, 0);
@@ -523,16 +528,4 @@ const Checkout = () => {
                     <Truck className="h-3 w-3 text-blue-600" /> Island-wide delivery
                   </p>
                   <p className="flex items-center gap-1">
-                    <Banknote className="h-3 w-3 text-orange-600" /> Cash on delivery available
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Checkout;
+                    <Banknote className="h-3 w-3 text-orange-600" />

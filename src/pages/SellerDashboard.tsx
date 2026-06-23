@@ -27,7 +27,7 @@ interface Product {
   id: string; name: string; price: number; stock: number; status: string;
   image_url: string | null; description: string | null; category_id: string | null;
   original_price: number | null; brand: string | null; sku: string | null;
-  images: string[]; variants: any;
+  images: string[]; variants: any; model_url?: string | null;
 }
 
 const emptyForm = {
@@ -36,6 +36,7 @@ const emptyForm = {
   images: [] as string[],
   sizes: "",
   video_url: "",
+  model_url: "",
 };
 
 const SellerDashboard = () => {
@@ -300,6 +301,7 @@ const SellerDashboard = () => {
       images: Array.isArray(p.images) ? p.images : [],
       sizes: Array.isArray(v.sizes) ? v.sizes.join(", ") : "",
       video_url: typeof v.video_url === "string" ? v.video_url : "",
+      model_url: typeof (p as any).model_url === "string" ? (p as any).model_url : "",
     });
     setOpen(true);
   };
@@ -361,6 +363,20 @@ const SellerDashboard = () => {
     e.target.value = "";
   };
 
+  const handleModelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !user) return;
+    if (file.size > 50 * 1024 * 1024) { toast.error("3D model must be under 50MB"); return; }
+    setUploading(true);
+    const path = `${user.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("3d-models").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setUploading(false); return; }
+    const { data: pub } = supabase.storage.from("3d-models").getPublicUrl(path);
+    setForm((f) => ({ ...f, model_url: pub.publicUrl }));
+    setUploading(false);
+    toast.success("3D model uploaded!");
+    e.target.value = "";
+  };
+
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); if (!user) return;
     const priceNum = parseFloat(form.price);
@@ -373,6 +389,7 @@ const SellerDashboard = () => {
       price: priceNum, original_price: origNum, stock: parseInt(form.stock),
       category_id: form.category_id || null, image_url: form.image_url || form.images[0] || null,
       images: form.images, brand: form.brand || null, sku: form.sku || null,
+      model_url: form.model_url.trim() || null,
       variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
     };
     const { error } = editing
@@ -955,6 +972,45 @@ const SellerDashboard = () => {
                   onChange={(e) => setForm((f) => ({ ...f, video_url: e.target.value }))}
                 />
               </div>
+            </div>
+
+            {/* 3D Model Upload */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-primary">3D</span>
+                </div>
+                <Label className="font-semibold text-sm">3D / AR Model <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Upload a .glb or .gltf file (max 50MB). Buyers can view in 3D and place the product in AR on their phone.</p>
+
+              {form.model_url ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl border bg-muted/30">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-primary">GLB</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{form.model_url.split("/").pop()}</p>
+                    <p className="text-[10px] text-green-600">Uploaded ✓</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, model_url: "" }))}
+                    className="shrink-0 text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-muted transition-smooth">
+                  {uploading ? (
+                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading 3D model…</span></>
+                  ) : (
+                    <><span className="text-lg">📦</span><span className="text-sm">Upload .glb / .gltf file</span></>
+                  )}
+                  <input type="file" accept=".glb,.gltf" className="hidden" onChange={handleModelUpload} disabled={uploading} />
+                </label>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

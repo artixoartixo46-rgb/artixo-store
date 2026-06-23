@@ -19,6 +19,7 @@ import {
   Zap,
   CheckCircle2,
   Wand2,
+  Box,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { useCart } from "@/hooks/useCart";
@@ -30,6 +31,7 @@ import { ImageLightbox } from "@/components/ImageLightbox";
 import { ZoomIn } from "lucide-react";
 import { toast } from "sonner";
 import { SEO, buildProductSchema, orgSchema } from "@/components/SEO";
+import { ProductModelViewer } from "@/components/ProductModelViewer";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -152,6 +154,7 @@ const ProductDetail = () => {
         sku: data.sku ?? null,
         specifications: data.specifications ?? {},
         variants: data.variants ?? [],
+        modelUrl: data.model_url ?? null,
         categories: categoryData,
         sellerProfile,
       });
@@ -190,6 +193,7 @@ const ProductDetail = () => {
     ? rawVariants.colors.map((c: any) => typeof c === "string" ? { name: c, image: "" } : c)
     : [];
   const videoUrl: string = typeof rawVariants.video_url === "string" ? rawVariants.video_url : (typeof product.video_url === "string" ? product.video_url : "");
+  const modelUrl: string = product.modelUrl ?? "";
   const isYouTube = videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be");
   const embedUrl = isYouTube
     ? videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/").replace("shorts/", "embed/")
@@ -265,15 +269,22 @@ const ProductDetail = () => {
             <Card
               className="aspect-square overflow-hidden bg-background relative group"
               onClick={() => {
-                if (activeImage && activeImage !== "__video__") {
+                if (activeImage && activeImage !== "__video__" && activeImage !== "__3d__") {
                   const i = gallery.indexOf(activeImage);
                   setLightboxIndex(i >= 0 ? i : 0);
                   setLightboxOpen(true);
                 }
               }}
-              style={{ cursor: activeImage && activeImage !== "__video__" ? "zoom-in" : "default" }}
+              style={{ cursor: activeImage && activeImage !== "__video__" && activeImage !== "__3d__" ? "zoom-in" : "default" }}
             >
-              {activeImage === "__video__" ? (
+              {activeImage === "__3d__" ? (
+                <ProductModelViewer
+                  modelUrl={modelUrl}
+                  productName={product.name}
+                  posterUrl={product.imageUrl ?? undefined}
+                  className="h-full w-full rounded-none border-0"
+                />
+              ) : activeImage === "__video__" ? (
                 isYouTube ? (
                   <iframe src={embedUrl} className="w-full h-full" allowFullScreen title="Product video" onClick={(e) => e.stopPropagation()} />
                 ) : (
@@ -298,8 +309,17 @@ const ProductDetail = () => {
               )}
             </Card>
 
-            {(videoUrl || gallery.length > 1) && (
+            {(videoUrl || modelUrl || gallery.length > 1) && (
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {modelUrl && (
+                  <button
+                    onClick={() => setActiveImage("__3d__")}
+                    className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-smooth relative flex flex-col items-center justify-center gap-0.5 ${activeImage === "__3d__" ? "border-primary bg-primary/10" : "border-transparent hover:border-primary/60 bg-muted"}`}
+                  >
+                    <Box className={`h-6 w-6 ${activeImage === "__3d__" ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`text-[9px] font-bold tracking-wide ${activeImage === "__3d__" ? "text-primary" : "text-muted-foreground"}`}>3D / AR</span>
+                  </button>
+                )}
                 {videoUrl && (
                   <button
                     onClick={() => setActiveImage("__video__")}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,6 +107,32 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "affiliates", label: "Affiliates", icon: Gift },
   { key: "withdrawals", label: "Withdrawals", icon: Banknote },
 ];
+
+// ── Stat card used on the dashboard overview ─────────────────────────────────
+const StatCard = ({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  accent?: string;
+}) => (
+  <Card className="p-5 relative overflow-hidden">
+    <div className="flex items-center justify-between mb-3">
+      <span className="text-sm text-muted-foreground font-medium">{label}</span>
+      <div className={`p-2 rounded-xl ${accent === "gradient-saffron" ? "bg-yellow-100 text-yellow-600" : accent === "gradient-royal" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+    </div>
+    <div className="font-display text-2xl font-bold">{value}</div>
+    {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+  </Card>
+);
 
 const AdminPanel = () => {
   const { user, roles, loading: authLoading, signOut } = useAuth();

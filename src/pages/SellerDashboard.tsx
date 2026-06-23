@@ -100,10 +100,9 @@ const SellerDashboard = () => {
     };
     if (profileForm.avatar_url !== undefined) payload.avatar_url = profileForm.avatar_url || null;
 
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("profiles")
-      .update(payload)
-      .eq("id", user.id);
+      .upsert({ id: user.id, ...payload }, { onConflict: "id" });
 
     setProfileSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -126,7 +125,7 @@ const SellerDashboard = () => {
     if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setBannerUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     const bannerUrl = pub.publicUrl;
-    const { error: dbErr } = await supabase.from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id);
+    const { error: dbErr } = await supabase.from("profiles").upsert({ id: user.id, banner_url: bannerUrl }, { onConflict: "id" });
     if (dbErr) { toast.error("Saved to storage but DB save failed: " + dbErr.message); }
     else { toast.success("Banner updated!"); }
     setProfileForm((f) => ({ ...f, banner_url: bannerUrl }));
@@ -143,7 +142,7 @@ const SellerDashboard = () => {
     if (oldFiles && oldFiles.length > 0) {
       await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
     }
-    const { error: dbErr } = await supabase.from("profiles").update({ banner_url: null }).eq("id", user.id);
+    const { error: dbErr } = await supabase.from("profiles").upsert({ id: user.id, banner_url: null }, { onConflict: "id" });
     if (dbErr) { toast.error("Could not remove banner from DB: " + dbErr.message); }
     else { toast.success("Banner removed"); }
     setProfileForm((f) => ({ ...f, banner_url: "" }));
@@ -168,7 +167,7 @@ const SellerDashboard = () => {
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     const avatarUrl = `${pub.publicUrl}?t=${Date.now()}`; // Cache bust
     setProfileForm((f) => ({ ...f, avatar_url: avatarUrl }));
-    const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+    const { error: dbErr } = await supabase.from("profiles").upsert({ id: user.id, avatar_url: avatarUrl }, { onConflict: "id" });
     if (dbErr) { toast.error("Saved to storage but DB save failed: " + dbErr.message); }
     else { toast.success("Profile photo updated!"); }
     setAvatarUploading(false);
@@ -774,7 +773,7 @@ const SellerDashboard = () => {
                       onClick={async () => {
                         setProfileForm((f) => ({ ...f, avatar_url: "" }));
                         if (user) {
-                          const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+                          const { error: dbErr } = await supabase.from("profiles").upsert({ id: user.id, avatar_url: null }, { onConflict: "id" });
                           if (dbErr) toast.error("DB error: " + dbErr.message);
                           else toast.success("Profile photo removed");
                         }

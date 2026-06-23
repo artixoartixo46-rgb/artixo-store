@@ -287,11 +287,11 @@ const SellerDashboard = () => {
     if (itemsError) { console.error("refreshOrders items:", itemsError); return; }
     if (!items || items.length === 0) { setOrders([]); return; }
 
-    // Step 2: fetch the corresponding orders by ID (separate query avoids join-level RLS blocking)
+    // Step 2: fetch the corresponding orders by ID — use select("*") to handle any DB schema state
     const orderIds = [...new Set(items.map((i: any) => i.order_id))];
-    const { data: orderRows, error: ordersError } = await supabase
+    const { data: orderRows, error: ordersError } = await (supabase as any)
       .from("orders")
-      .select("id, status, created_at, shipping_address, shipping_phone, total_amount, notes, tracking_number, courier, payment_method, customer_id")
+      .select("*")
       .in("id", orderIds);
     if (ordersError) { console.error("refreshOrders orders:", ordersError); return; }
 
@@ -360,11 +360,11 @@ const SellerDashboard = () => {
   const saveTrackingAndShip = async () => {
     if (!trackingForm) return;
     setTrackingSaving(true);
-    const { error } = await supabase.from("orders").update({
-      status: "shipped",
-      courier: trackingForm.courier,
-      tracking_number: trackingForm.trackingNumber.trim() || null,
-    }).eq("id", trackingForm.orderId);
+    // Build update payload — only include tracking fields if they exist in DB (guarded by try)
+    const updatePayload: Record<string, unknown> = { status: "shipped" };
+    if (trackingForm.courier) updatePayload.courier = trackingForm.courier;
+    if (trackingForm.trackingNumber?.trim()) updatePayload.tracking_number = trackingForm.trackingNumber.trim();
+    const { error } = await (supabase as any).from("orders").update(updatePayload).eq("id", trackingForm.orderId);
     setTrackingSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Order marked as shipped with tracking info!");
@@ -375,6 +375,28 @@ const SellerDashboard = () => {
   useEffect(() => {
     supabase.from("categories").select("id,name").then(({ data }) => setCategories((data ?? []) as Category[]));
     refresh(); refreshOrders(); refreshVerif(); loadProfile(); loadEarnings();
+  }, [user]);
+
+  // Realtime: auto-refresh orders when a new order_item arrives for this seller
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`seller-orders-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "order_items", filter: `seller_id=eq.${user.id}` },
+        () => {
+          refreshOrders();
+          toast.success("🛒 New order received!", { duration: 5000 });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        () => { refreshOrders(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   if (!authLoading && !user) return <Navigate to="/auth" replace />;

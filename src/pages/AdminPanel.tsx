@@ -91,7 +91,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -105,6 +105,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "customize", label: "Customize Site", icon: Paintbrush },
   { key: "errors", label: "Error Monitor", icon: Bug },
   { key: "affiliates", label: "Affiliates", icon: Gift },
+  { key: "withdrawals", label: "Withdrawals", icon: Banknote },
 ];
 
 const AdminPanel = () => {
@@ -117,6 +118,8 @@ const AdminPanel = () => {
   const [pendingSellers, setPendingSellers] = useState<any[]>([]);
   const [returnRequests, setReturnRequests] = useState<any[]>([]);
   const [verifRequests, setVerifRequests] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<any[]>([]);
+  const [withdrawalNotes, setWithdrawalNotes] = useState<Record<string, string>>({});
   const [adminNoteMap, setAdminNoteMap] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [addSellerEmail, setAddSellerEmail] = useState("");
@@ -217,12 +220,50 @@ const AdminPanel = () => {
       shopName: usersMap[vr.seller_id]?.shop_name ?? "—",
     }));
     setVerifRequests(vrList);
+
+    // Load withdrawal requests (table may not exist yet — fail silently)
+    const wdRes = await (supabase as any)
+      .from("withdrawals")
+      .select("*")
+      .order("requested_at", { ascending: false });
+    const wdData = wdRes.error ? [] : (wdRes.data ?? []);
+    const wdList = wdData.map((wd: any) => ({
+      ...wd,
+      sellerName: usersMap[wd.seller_id]?.full_name ?? "—",
+      sellerEmail: usersMap[wd.seller_id]?.email ?? "—",
+      shopName: usersMap[wd.seller_id]?.shop_name ?? "—",
+    }));
+    setWithdrawalRequests(wdList);
   };
 
   const updateOrderStatus = async (id: string, status: string) => {
+    // Check current status before updating (to avoid double-crediting)
+    const currentOrder = orders.find((o) => o.id === id);
     const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order ${status}`);
+
+    // ── Commission credit on delivery ─────────────────────────────────────────
+    if (status === "delivered" && currentOrder?.status !== "delivered") {
+      const { data: items } = await supabase
+        .from("order_items")
+        .select("seller_id, unit_price, quantity")
+        .eq("order_id", id);
+      // Group by seller
+      const sellerTotals: Record<string, number> = {};
+      for (const item of items ?? []) {
+        sellerTotals[item.seller_id] = (sellerTotals[item.seller_id] ?? 0) + Number(item.unit_price) * item.quantity;
+      }
+      // Credit each seller's net amount
+      for (const [sellerId, gross] of Object.entries(sellerTotals)) {
+        const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", sellerId).maybeSingle();
+        const rate = Number(profile?.commission_rate ?? 8);
+        const net = gross * (1 - rate / 100);
+        const newBalance = Number(profile?.seller_balance ?? 0) + net;
+        await (supabase as any).from("profiles").upsert({ id: sellerId, seller_balance: newBalance }, { onConflict: "id" });
+      }
+    }
+
     // Send status update email asynchronously
     supabase.functions
       .invoke("send-order-confirmation", { body: { order_id: id, is_update: true } })
@@ -481,6 +522,9 @@ const AdminPanel = () => {
                         )}
                         {item.key === "pending" && pending.length > 0 && (
                           <Badge className="ml-auto h-5 px-1.5 bg-primary text-primary-foreground">{pending.length}</Badge>
+                        )}
+                        {item.key === "withdrawals" && withdrawalRequests.filter((w) => w.status === "pending").length > 0 && (
+                          <Badge className="ml-auto h-5 px-1.5 bg-green-500 text-white">{withdrawalRequests.filter((w) => w.status === "pending").length}</Badge>
                         )}
                         {item.key === "orders" && newOrderCount > 0 && (
                           <Badge className="ml-auto h-5 px-1.5 bg-green-500 text-white animate-pulse">{newOrderCount}</Badge>
@@ -934,6 +978,117 @@ const AdminPanel = () => {
             {section === "errors" && <AdminErrorMonitor />}
 
             {section === "affiliates" && <AdminAffiliatesSection />}
+
+            {/* ── WITHDRAWALS SECTION ────────────────────────────────────────── */}
+            {section === "withdrawals" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-2xl">Seller Withdrawals</h2>
+                  <Button size="sm" variant="outline" onClick={refresh}><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
+                </div>
+
+                {withdrawalRequests.length === 0 ? (
+                  <Card className="p-12 text-center text-muted-foreground">No withdrawal requests yet.</Card>
+                ) : (
+                  <div className="space-y-3">
+                    {withdrawalRequests.map((wd) => (
+                      <Card key={wd.id} className="p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                          <div>
+                            <div className="font-medium">{wd.sellerName}</div>
+                            <div className="text-sm text-muted-foreground">{wd.sellerEmail} — {wd.shopName}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              Requested: {wd.requested_at ? new Date(wd.requested_at).toLocaleString("en-LK") : "—"}
+                            </div>
+                          </div>
+                          <Badge
+                            className={
+                              wd.status === "approved" ? "bg-green-100 text-green-700 border-green-200" :
+                              wd.status === "rejected" ? "bg-red-100 text-red-700 border-red-200" :
+                              "bg-yellow-100 text-yellow-700 border-yellow-200"
+                            }
+                          >
+                            {wd.status.toUpperCase()}
+                          </Badge>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-3 mb-3 text-sm">
+                          <div className="bg-muted/40 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Amount</div>
+                            <div className="font-display font-bold text-lg">{formatLKR(wd.net_amount)}</div>
+                          </div>
+                          <div className="bg-muted/40 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Bank</div>
+                            <div className="font-medium">{wd.bank_name}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{wd.account_number}</div>
+                          </div>
+                          <div className="bg-muted/40 rounded-lg p-3">
+                            <div className="text-xs text-muted-foreground">Account Holder</div>
+                            <div className="font-medium">{wd.account_holder}</div>
+                          </div>
+                        </div>
+
+                        {wd.admin_note && (
+                          <div className="text-sm text-muted-foreground mb-3 italic">Note: {wd.admin_note}</div>
+                        )}
+
+                        {wd.status === "pending" && (
+                          <div className="space-y-2">
+                            <input
+                              className="w-full border border-border rounded-md px-3 py-1.5 text-sm bg-background placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              placeholder="Admin note (optional)"
+                              value={withdrawalNotes[wd.id] ?? ""}
+                              onChange={(e) => setWithdrawalNotes((n) => ({ ...n, [wd.id]: e.target.value }))}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+                                onClick={async () => {
+                                  const { error } = await (supabase as any).from("withdrawals").update({
+                                    status: "approved",
+                                    admin_note: withdrawalNotes[wd.id] ?? null,
+                                    processed_at: new Date().toISOString(),
+                                  }).eq("id", wd.id);
+                                  if (error) { toast.error(error.message); return; }
+                                  toast.success(`Withdrawal approved for ${wd.sellerName}`);
+                                  refresh();
+                                }}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                className="gap-1.5"
+                                onClick={async () => {
+                                  const note = withdrawalNotes[wd.id]?.trim();
+                                  if (!note) { toast.error("Please add a rejection reason"); return; }
+                                  // Refund balance to seller
+                                  const { data: profile } = await (supabase as any).from("profiles").select("seller_balance").eq("id", wd.seller_id).maybeSingle();
+                                  const restored = Number(profile?.seller_balance ?? 0) + Number(wd.net_amount);
+                                  await (supabase as any).from("profiles").upsert({ id: wd.seller_id, seller_balance: restored }, { onConflict: "id" });
+                                  const { error } = await (supabase as any).from("withdrawals").update({
+                                    status: "rejected",
+                                    admin_note: note,
+                                    processed_at: new Date().toISOString(),
+                                  }).eq("id", wd.id);
+                                  if (error) { toast.error(error.message); return; }
+                                  toast.success(`Withdrawal rejected & balance refunded to ${wd.sellerName}`);
+                                  refresh();
+                                }}
+                              >
+                                <XCircle className="h-3.5 w-3.5" /> Reject & Refund
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
           </main>
         </div>

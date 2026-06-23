@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play, Wallet, TrendingUp, Banknote, ArrowDownToLine } from "lucide-react";
 import { sendPushToUser } from "@/hooks/usePushNotifications";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
@@ -63,6 +63,13 @@ const SellerDashboard = () => {
   const [verifForm, setVerifForm] = useState({ business_name: "", business_type: "", phone: "", notes: "" });
   const [verifSaving, setVerifSaving] = useState(false);
 
+  // Earnings / wallet state
+  const [sellerBalance, setSellerBalance] = useState(0);
+  const [commissionRate, setCommissionRate] = useState(8);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [withdrawalForm, setWithdrawalForm] = useState({ amount: "", bank_name: "", account_number: "", account_holder: "" });
+  const [submittingWithdrawal, setSubmittingWithdrawal] = useState(false);
+
   // Shop profile state
   const [profileForm, setProfileForm] = useState({ bio: "", banner_url: "", avatar_url: "", shop_name: "", full_name: "" });
   const [profileSaving, setProfileSaving] = useState(false);
@@ -85,6 +92,56 @@ const SellerDashboard = () => {
       shop_name: data.shop_name ?? "",
       full_name: data.full_name ?? "",
     });
+  };
+
+  const loadEarnings = async () => {
+    if (!user) return;
+    const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", user.id).maybeSingle();
+    if (profile) {
+      setSellerBalance(Number(profile.seller_balance ?? 0));
+      setCommissionRate(Number(profile.commission_rate ?? 8));
+    }
+    const { data: wds } = await (supabase as any).from("withdrawals").select("*").eq("seller_id", user.id).order("requested_at", { ascending: false });
+    setWithdrawals(wds ?? []);
+  };
+
+  const submitWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const amount = parseFloat(withdrawalForm.amount);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    if (amount > sellerBalance) { toast.error(`Max available: ${formatLKR(sellerBalance)}`); return; }
+    if (!withdrawalForm.bank_name.trim() || !withdrawalForm.account_number.trim() || !withdrawalForm.account_holder.trim()) {
+      toast.error("Please fill all bank details"); return;
+    }
+    setSubmittingWithdrawal(true);
+    // Deduct from balance immediately
+    const newBalance = sellerBalance - amount;
+    const { error: balErr } = await (supabase as any).from("profiles").upsert({ id: user.id, seller_balance: newBalance }, { onConflict: "id" });
+    if (balErr) { toast.error("Balance update failed: " + balErr.message); setSubmittingWithdrawal(false); return; }
+    // Insert withdrawal record
+    const { error: wdErr } = await (supabase as any).from("withdrawals").insert({
+      seller_id: user.id,
+      gross_amount: amount,
+      commission: 0, // already deducted from earnings
+      net_amount: amount,
+      bank_name: withdrawalForm.bank_name.trim(),
+      account_number: withdrawalForm.account_number.trim(),
+      account_holder: withdrawalForm.account_holder.trim(),
+      status: "pending",
+    });
+    if (wdErr) {
+      // Rollback balance
+      await (supabase as any).from("profiles").upsert({ id: user.id, seller_balance: sellerBalance }, { onConflict: "id" });
+      toast.error("Withdrawal request failed: " + wdErr.message);
+      setSubmittingWithdrawal(false);
+      return;
+    }
+    setSellerBalance(newBalance);
+    setWithdrawalForm({ amount: "", bank_name: "", account_number: "", account_holder: "" });
+    setSubmittingWithdrawal(false);
+    toast.success("Withdrawal request submitted! Admin will process it within 1-2 business days.");
+    loadEarnings();
   };
 
   const saveProfile = async (e: React.FormEvent) => {
@@ -247,10 +304,27 @@ const SellerDashboard = () => {
       setTrackingForm({ orderId, courier: "DHL", trackingNumber: "" });
       return;
     }
-    const { data: ord } = await supabase.from("orders").select("customer_id").eq("id", orderId).maybeSingle() as any;
+    const { data: ord } = await supabase.from("orders").select("customer_id, status").eq("id", orderId).maybeSingle() as any;
     const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order marked as ${status}`);
+
+    // ── Commission credit on delivery ─────────────────────────────────────────
+    if (status === "delivered" && ord?.status !== "delivered") {
+      const myTotal = orders.find((o) => o.id === orderId)?.my_items
+        ?.reduce((s: number, it: any) => s + Number(it.unitPrice) * it.quantity, 0) ?? 0;
+      if (myTotal > 0) {
+        const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", user!.id).maybeSingle();
+        const rate = Number(profile?.commission_rate ?? 8);
+        const commission = myTotal * (rate / 100);
+        const net = myTotal - commission;
+        const newBalance = Number(profile?.seller_balance ?? 0) + net;
+        await (supabase as any).from("profiles").upsert({ id: user!.id, seller_balance: newBalance }, { onConflict: "id" });
+        setSellerBalance(newBalance);
+        toast.success(`+${formatLKR(net)} credited to your wallet (${rate}% commission deducted)`);
+      }
+    }
+
     // Push notification to buyer
     if (ord?.customer_id) {
       const statusMsg: Record<string, string> = {
@@ -285,7 +359,7 @@ const SellerDashboard = () => {
 
   useEffect(() => {
     supabase.from("categories").select("id,name").then(({ data }) => setCategories((data ?? []) as Category[]));
-    refresh(); refreshOrders(); refreshVerif(); loadProfile();
+    refresh(); refreshOrders(); refreshVerif(); loadProfile(); loadEarnings();
   }, [user]);
 
   if (!authLoading && !user) return <Navigate to="/auth" replace />;
@@ -446,6 +520,9 @@ const SellerDashboard = () => {
           </TabsTrigger>
           <TabsTrigger value="profile">
             <User className="h-4 w-4 mr-1" /> Profile
+          </TabsTrigger>
+          <TabsTrigger value="earnings">
+            <Wallet className="h-4 w-4 mr-1" /> Earnings
           </TabsTrigger>
         </TabsList>
 
@@ -839,6 +916,131 @@ const SellerDashboard = () => {
                 )}
               </div>
             </form>
+          </div>
+        </TabsContent>
+
+        {/* ── EARNINGS TAB ─────────────────────────────────────────────────────── */}
+        <TabsContent value="earnings">
+          <div className="space-y-6 max-w-2xl">
+            {/* Balance cards */}
+            <div className="grid sm:grid-cols-3 gap-4">
+              <Card className="p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                  <Wallet className="h-3.5 w-3.5" /> Available Balance
+                </div>
+                <div className="font-display text-2xl text-green-600">{formatLKR(sellerBalance)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Ready to withdraw</div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3.5 w-3.5" /> Commission Rate
+                </div>
+                <div className="font-display text-2xl">{commissionRate}%</div>
+                <div className="text-xs text-muted-foreground mt-1">ARTIXO platform fee</div>
+              </Card>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 mb-1 text-xs text-muted-foreground">
+                  <ArrowDownToLine className="h-3.5 w-3.5" /> Pending Withdrawals
+                </div>
+                <div className="font-display text-2xl text-orange-500">
+                  {withdrawals.filter((w) => w.status === "pending").length}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Awaiting admin</div>
+              </Card>
+            </div>
+
+            {/* Info box */}
+            <Card className="p-4 bg-blue-50/30 border-blue-200">
+              <p className="text-sm text-blue-700">
+                <strong>How it works:</strong> When you mark an order as <em>Delivered</em>, your earnings (minus the {commissionRate}% platform commission) are automatically added to your balance. You can then request a bank transfer any time.
+              </p>
+            </Card>
+
+            {/* Withdrawal request form */}
+            <Card className="p-5">
+              <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-primary" /> Request Withdrawal
+              </h3>
+              <form onSubmit={submitWithdrawal} className="space-y-3">
+                <div>
+                  <Label>Amount (LKR) *</Label>
+                  <Input
+                    type="number" min="100" step="0.01"
+                    placeholder={`Max: ${formatLKR(sellerBalance)}`}
+                    value={withdrawalForm.amount}
+                    onChange={(e) => setWithdrawalForm((f) => ({ ...f, amount: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label>Bank Name *</Label>
+                    <Input
+                      placeholder="e.g. Commercial Bank"
+                      value={withdrawalForm.bank_name}
+                      onChange={(e) => setWithdrawalForm((f) => ({ ...f, bank_name: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label>Account Number *</Label>
+                    <Input
+                      placeholder="e.g. 1234567890"
+                      value={withdrawalForm.account_number}
+                      onChange={(e) => setWithdrawalForm((f) => ({ ...f, account_number: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Account Holder Name *</Label>
+                  <Input
+                    placeholder="Name as on bank account"
+                    value={withdrawalForm.account_holder}
+                    onChange={(e) => setWithdrawalForm((f) => ({ ...f, account_holder: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  variant="hero"
+                  disabled={submittingWithdrawal || sellerBalance <= 0}
+                  className="w-full"
+                >
+                  {submittingWithdrawal ? "Submitting…" : <><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Request Withdrawal</>}
+                </Button>
+                {sellerBalance <= 0 && (
+                  <p className="text-xs text-muted-foreground text-center">No balance available. Mark delivered orders to earn.</p>
+                )}
+              </form>
+            </Card>
+
+            {/* Withdrawal history */}
+            {withdrawals.length > 0 && (
+              <Card className="p-5">
+                <h3 className="font-display text-lg font-semibold mb-4">Withdrawal History</h3>
+                <div className="space-y-3">
+                  {withdrawals.map((w) => (
+                    <div key={w.id} className="flex items-center justify-between gap-3 py-2 border-b last:border-0">
+                      <div>
+                        <div className="text-sm font-medium">{formatLKR(w.net_amount)}</div>
+                        <div className="text-xs text-muted-foreground">{w.bank_name} • {w.account_number}</div>
+                        <div className="text-xs text-muted-foreground">{w.requested_at ? new Date(w.requested_at).toLocaleDateString("en-LK") : ""}</div>
+                      </div>
+                      <Badge
+                        className={
+                          w.status === "approved" ? "bg-green-100 text-green-700 border-green-200" :
+                          w.status === "rejected" ? "bg-red-100 text-red-700 border-red-200" :
+                          "bg-yellow-100 text-yellow-700 border-yellow-200"
+                        }
+                      >
+                        {w.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>

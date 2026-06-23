@@ -228,17 +228,22 @@ const Checkout = () => {
       throw error ?? new Error("Order save failed");
     }
 
-    const itemRows = cartItems.map((i) => ({
-      order_id: order.id,
-      product_id: i.product_id,
-      product_name: i.product?.name || "",
-      unit_price: i.product?.price || 0,
-      quantity: i.quantity,
-      seller_id: i.product?.seller_id,
-    }));
+    const itemRows = cartItems
+      .filter((i) => i.product?.seller_id)   // skip any item with no seller (safety guard)
+      .map((i) => ({
+        order_id: order.id,
+        product_id: i.product_id,
+        product_name: i.product?.name || "",
+        unit_price: i.product?.price || 0,
+        quantity: i.quantity,
+        seller_id: i.product!.seller_id,
+      }));
 
     const { error: itemsError } = await supabase.from("order_items").insert(itemRows);
-    if (itemsError) console.error("Order items save error:", itemsError);
+    if (itemsError) {
+      console.error("Order items save error:", itemsError);
+      toast.error("Order placed but item details may be incomplete. Contact support.");
+    }
 
     // Send order confirmation email asynchronously
     supabase.functions

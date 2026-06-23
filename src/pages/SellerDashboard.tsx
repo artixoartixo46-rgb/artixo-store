@@ -278,17 +278,32 @@ const SellerDashboard = () => {
 
   const refreshOrders = async () => {
     if (!user) return;
-    const { data: items, error } = await supabase
+
+    // Step 1: get all order_items belonging to this seller
+    const { data: items, error: itemsError } = await supabase
       .from("order_items")
-      .select("*, orders(id, status, created_at, shipping_address, shipping_phone, total_amount, notes, tracking_number, courier, payment_method)")
+      .select("id, order_id, product_name, quantity, unit_price")
       .eq("seller_id", user.id);
-    if (error) return;
+    if (itemsError) { console.error("refreshOrders items:", itemsError); return; }
+    if (!items || items.length === 0) { setOrders([]); return; }
+
+    // Step 2: fetch the corresponding orders by ID (separate query avoids join-level RLS blocking)
+    const orderIds = [...new Set(items.map((i: any) => i.order_id))];
+    const { data: orderRows, error: ordersError } = await supabase
+      .from("orders")
+      .select("id, status, created_at, shipping_address, shipping_phone, total_amount, notes, tracking_number, courier, payment_method, customer_id")
+      .in("id", orderIds);
+    if (ordersError) { console.error("refreshOrders orders:", ordersError); return; }
+
+    // Step 3: merge
     const orderMap = new Map<string, any>();
-    for (const item of items ?? []) {
-      const ord = (item as any).orders;
+    for (const ord of orderRows ?? []) {
+      orderMap.set(ord.id, { ...ord, my_items: [] });
+    }
+    for (const item of items) {
+      const ord = orderMap.get((item as any).order_id);
       if (!ord) continue;
-      if (!orderMap.has(ord.id)) orderMap.set(ord.id, { ...ord, my_items: [] });
-      orderMap.get(ord.id).my_items.push({
+      ord.my_items.push({
         productName: (item as any).product_name,
         quantity: (item as any).quantity,
         unitPrice: (item as any).unit_price,

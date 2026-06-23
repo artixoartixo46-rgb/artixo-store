@@ -113,60 +113,65 @@ const SellerDashboard = () => {
   const uploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     setBannerUploading(true);
-    // Delete old banner files for this seller before uploading new one
-    try {
-      const { data: oldFiles } = await supabase.storage
-        .from("product-images")
-        .list("banners", { search: user.id });
-      if (oldFiles && oldFiles.length > 0) {
-        await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
-      }
-    } catch (_) { /* ignore cleanup errors */ }
+    // Delete old banner files for this seller first
+    const { data: oldFiles } = await supabase.storage
+      .from("product-images")
+      .list("banners", { search: user.id });
+    if (oldFiles && oldFiles.length > 0) {
+      await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
+    }
     const ext = file.name.split(".").pop();
     const path = `banners/${user.id}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
-    if (error) { toast.error(error.message); setBannerUploading(false); return; }
+    const { error: uploadErr } = await supabase.storage.from("product-images").upload(path, file);
+    if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setBannerUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     const bannerUrl = pub.publicUrl;
-    // Save banner_url to DB (column may not exist in older installs — ignore error)
-    try { await (supabase as any).from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id); } catch (_) {}
+    const { error: dbErr } = await supabase.from("profiles").update({ banner_url: bannerUrl }).eq("id", user.id);
+    if (dbErr) { toast.error("Saved to storage but DB save failed: " + dbErr.message); }
+    else { toast.success("Banner updated!"); }
     setProfileForm((f) => ({ ...f, banner_url: bannerUrl }));
     setBannerUploading(false);
-    toast.success("Banner updated!");
     e.target.value = "";
   };
 
   const removeBanner = async () => {
     if (!user) return;
     setBannerUploading(true);
-    try {
-      const { data: oldFiles } = await supabase.storage
-        .from("product-images")
-        .list("banners", { search: user.id });
-      if (oldFiles && oldFiles.length > 0) {
-        await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
-      }
-    } catch (_) { /* ignore */ }
-    try { await (supabase as any).from("profiles").update({ banner_url: null }).eq("id", user.id); } catch (_) {}
+    const { data: oldFiles } = await supabase.storage
+      .from("product-images")
+      .list("banners", { search: user.id });
+    if (oldFiles && oldFiles.length > 0) {
+      await supabase.storage.from("product-images").remove(oldFiles.map((f) => `banners/${f.name}`));
+    }
+    const { error: dbErr } = await supabase.from("profiles").update({ banner_url: null }).eq("id", user.id);
+    if (dbErr) { toast.error("Could not remove banner from DB: " + dbErr.message); }
+    else { toast.success("Banner removed"); }
     setProfileForm((f) => ({ ...f, banner_url: "" }));
     setBannerUploading(false);
-    toast.success("Banner removed");
   };
 
   const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     setAvatarUploading(true);
+    // Always use a unique path to avoid upsert/ownership conflicts
     const ext = file.name.split(".").pop();
-    const path = `avatars/${user.id}.${ext}`;  // Overwrite same file each time
-    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
-    if (error) { toast.error(error.message); setAvatarUploading(false); return; }
+    const path = `avatars/${user.id}-${Date.now()}.${ext}`;
+    // Remove old avatars for this user first
+    const { data: oldFiles } = await supabase.storage
+      .from("product-images")
+      .list("avatars", { search: user.id });
+    if (oldFiles && oldFiles.length > 0) {
+      await supabase.storage.from("product-images").remove(oldFiles.map((f) => `avatars/${f.name}`));
+    }
+    const { error: uploadErr } = await supabase.storage.from("product-images").upload(path, file);
+    if (uploadErr) { toast.error("Upload failed: " + uploadErr.message); setAvatarUploading(false); return; }
     const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
     const avatarUrl = `${pub.publicUrl}?t=${Date.now()}`; // Cache bust
     setProfileForm((f) => ({ ...f, avatar_url: avatarUrl }));
-    // Auto-save avatar_url to DB immediately
-    await (supabase as any).from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+    const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+    if (dbErr) { toast.error("Saved to storage but DB save failed: " + dbErr.message); }
+    else { toast.success("Profile photo updated!"); }
     setAvatarUploading(false);
-    toast.success("Profile photo updated!");
     e.target.value = "";
   };
 
@@ -768,8 +773,11 @@ const SellerDashboard = () => {
                       className="text-xs text-muted-foreground gap-1.5 justify-start"
                       onClick={async () => {
                         setProfileForm((f) => ({ ...f, avatar_url: "" }));
-                        if (user) await (supabase as any).from("profiles").update({ avatar_url: null }).eq("id", user.id);
-                        toast.success("Profile photo removed");
+                        if (user) {
+                          const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: null }).eq("id", user.id);
+                          if (dbErr) toast.error("DB error: " + dbErr.message);
+                          else toast.success("Profile photo removed");
+                        }
                       }}
                     >
                       <X className="h-3 w-3" /> Remove photo

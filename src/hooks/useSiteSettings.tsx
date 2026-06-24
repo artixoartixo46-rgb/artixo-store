@@ -102,6 +102,7 @@ interface SiteSettingsCtx {
   dbReady: boolean;
   refresh: () => Promise<void>;
   save: (updates: Partial<SiteSettings>) => Promise<void>;
+  preview: (updates: Partial<SiteSettings>) => void;
 }
 
 const Ctx = createContext<SiteSettingsCtx>({
@@ -109,6 +110,7 @@ const Ctx = createContext<SiteSettingsCtx>({
   dbReady: false,
   refresh: async () => {},
   save: async () => {},
+  preview: () => {},
 });
 
 /** Convert HSL string like "49 100% 50%" → hex */
@@ -178,34 +180,62 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await (supabase as any).from("site_settings").select("key, value");
       if (error) throw error;
-      if (data && data.length > 0) {
-        const map: Record<string, string> = {};
-        data.forEach((r: { key: string; value: string }) => { map[r.key] = r.value; });
-        const merged = { ...DEFAULT_SETTINGS, ...map } as SiteSettings;
-        setSettings(merged);
-        applyCSSVars(merged);
-        setDbReady(true);
-      }
+      const map: Record<string, string> = {};
+      if (data) data.forEach((r: { key: string; value: string }) => { map[r.key] = r.value; });
+      const merged = { ...DEFAULT_SETTINGS, ...map } as SiteSettings;
+      setSettings(merged);
+      applyCSSVars(merged);
+      setDbReady(true);
     } catch {
       // Table doesn't exist yet — use defaults silently
       setDbReady(false);
     }
   };
 
+  // preview: update context immediately (no DB save) — for live admin preview
+  const preview = (updates: Partial<SiteSettings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...updates };
+      applyCSSVars(next);
+      return next;
+    });
+  };
+
   const save = async (updates: Partial<SiteSettings>) => {
+    // Apply to context immediately so UI updates even before DB confirms
     const next = { ...settings, ...updates };
     setSettings(next);
     applyCSSVars(next);
-    const rows = Object.entries(updates).map(([key, value]) => ({ key, value, updated_at: new Date().toISOString() }));
-    const { error } = await (supabase as any).from("site_settings").upsert(rows, { onConflict: "key" });
+
+    const rows = Object.entries(updates).map(([key, value]) => ({
+      key,
+      value: String(value ?? ""),
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Use select() to detect silent RLS failures (0 rows returned = blocked)
+    const { data, error } = await (supabase as any)
+      .from("site_settings")
+      .upsert(rows, { onConflict: "key" })
+      .select("key");
+
     if (error) throw new Error(error.message);
+
+    // If every single row was blocked by RLS, data will be empty
+    if (!data || data.length === 0) {
+      throw new Error(
+        "Settings were not saved — your account may not have admin write permission on the site_settings table. " +
+        "Run the setup SQL in your Supabase project's SQL editor to fix this."
+      );
+    }
+
     setDbReady(true);
   };
 
   useEffect(() => { load(); }, []);
 
   return (
-    <Ctx.Provider value={{ settings, dbReady, refresh: load, save }}>
+    <Ctx.Provider value={{ settings, dbReady, refresh: load, save, preview }}>
       {children}
     </Ctx.Provider>
   );

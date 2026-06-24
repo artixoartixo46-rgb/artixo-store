@@ -91,7 +91,7 @@ const SectionTitle = ({ title, desc }: { title: string; desc: string }) => (
 );
 
 export const AdminCustomizeSection = () => {
-  const { settings, dbReady, save } = useSiteSettings();
+  const { settings, dbReady, save, preview } = useSiteSettings();
   const [draft, setDraft] = useState<SiteSettings>({ ...settings });
   const [draftInitialized, setDraftInitialized] = useState(dbReady);
   const [saving, setSaving] = useState(false);
@@ -107,8 +107,11 @@ export const AdminCustomizeSection = () => {
   const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "banner" | "sections" | "social" | "delivery" | "seo" | "footer" | "maintenance" | "currency">("identity");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
-  const update = <K extends keyof SiteSettings>(key: K, val: string) =>
+  const update = <K extends keyof SiteSettings>(key: K, val: string) => {
     setDraft((d) => ({ ...d, [key]: val }));
+    // Live preview — update global context so homepage banner changes instantly
+    preview({ [key]: val } as Partial<SiteSettings>);
+  };
 
   const saveAll = async () => {
     setSaving(true);
@@ -478,6 +481,21 @@ export const AdminCustomizeSection = () => {
                 </div>
                 <p className="absolute bottom-2 right-3 text-[10px] text-white/40">Preview</p>
               </div>
+
+              {/* View on Homepage button */}
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+              >
+                <Monitor className="h-4 w-4" />
+                View Live Banner on Homepage ↗
+              </a>
+
+              <p className="text-xs text-gray-400 text-center mt-2">
+                Changes preview instantly — click <strong>Save All Changes</strong> to persist.
+              </p>
             </>
           )}
 

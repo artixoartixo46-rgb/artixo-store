@@ -32,12 +32,14 @@ interface AiResult {
 }
 
 // ── Gemini call ────────────────────────────────────────────────────────
-async function analyzeOutfit(slots: OutfitSlot[]): Promise<AiResult | null> {
+async function analyzeOutfit(slots: OutfitSlot[]): Promise<{ result: AiResult | null; error: string | null }> {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    return { result: null, error: "AI key not configured. Please contact support." };
+  }
 
   const filled = slots.filter((s) => s.product);
-  if (filled.length === 0) return null;
+  if (filled.length === 0) return { result: null, error: "Add at least 2 items first!" };
 
   const items = filled
     .map((s) => `${s.label}: "${s.product!.name}" (LKR ${s.product!.price.toLocaleString()})`)
@@ -77,13 +79,20 @@ Rules:
         }),
       }
     );
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error("Gemini error:", res.status, errData);
+      return { result: null, error: `AI error (${res.status}). Try again in a moment.` };
+    }
     const data = await res.json();
     const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    return JSON.parse(match[0]) as AiResult;
-  } catch {
-    return null;
+    if (!match) return { result: null, error: "AI returned unexpected response. Please try again." };
+    const parsed = JSON.parse(match[0]) as AiResult;
+    return { result: parsed, error: null };
+  } catch (e) {
+    console.error("Gemini fetch failed:", e);
+    return { result: null, error: "Network error. Check your connection and try again." };
   }
 }
 
@@ -94,6 +103,7 @@ const OutfitBuilder = () => {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [activeSlotIdx, setActiveSlotIdx] = useState<number | null>(null);
   const [addedToCart, setAddedToCart] = useState<string[]>([]);
 
@@ -141,13 +151,20 @@ const OutfitBuilder = () => {
   const clearSlot = (idx: number) => {
     setSlots((prev) => prev.map((s, i) => (i === idx ? { ...s, product: null } : s)));
     setAiResult(null);
+    setAiError(null);
   };
 
   const handleAnalyze = async () => {
     setAnalyzing(true);
     setAiResult(null);
-    const result = await analyzeOutfit(slots);
+    setAiError(null);
+    // Minimum 1.2s so the spinner is always visible
+    const [{ result, error }] = await Promise.all([
+      analyzeOutfit(slots),
+      new Promise((r) => setTimeout(r, 1200)),
+    ]);
     setAiResult(result);
+    setAiError(error);
     setAnalyzing(false);
   };
 
@@ -332,6 +349,18 @@ const OutfitBuilder = () => {
             </>
           )}
         </button>
+
+        {/* AI Error */}
+        {aiError && !analyzing && (
+          <div className="mt-3 rounded-2xl px-4 py-3 flex items-start gap-2.5 text-sm"
+            style={{ background: "hsl(0 84% 60% / 0.1)", border: "1px solid hsl(0 84% 60% / 0.25)" }}>
+            <span className="text-lg leading-none mt-0.5">⚠️</span>
+            <div>
+              <p className="font-semibold text-red-700 text-xs mb-0.5">AI Analysis Failed</p>
+              <p className="text-red-600/80 text-xs">{aiError}</p>
+            </div>
+          </div>
+        )}
 
         {/* AI Result */}
         {aiResult && (

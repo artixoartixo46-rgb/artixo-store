@@ -1,7 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Sparkles, X, Loader2, Mic, MicOff } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { useVoiceSearch } from "@/hooks/useVoiceSearch";
 import { cn } from "@/lib/utils";
 
@@ -84,6 +83,7 @@ export const AiSearchBar = ({ onSearch }: { onSearch?: () => void } = {}) => {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [interimText, setInterimText] = useState("");
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const doSearch = useCallback(async (q: string) => {
@@ -143,83 +143,108 @@ export const AiSearchBar = ({ onSearch }: { onSearch?: () => void } = {}) => {
 
   return (
     <form onSubmit={handleSearch} className="flex-1 w-full max-w-2xl">
-      <div className="relative">
-        {/* Left icon — spinner while loading or AI processing voice */}
-        {loading ? (
-          <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary animate-spin" />
-        ) : (
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div
+        className={cn(
+          "relative flex items-center rounded-full transition-all duration-300",
+          "bg-white/80 backdrop-blur-md",
+          "border-2",
+          focused || isListening
+            ? "border-primary shadow-[0_0_0_3px_hsl(49_100%_50%/0.18)]"
+            : "border-white/60 shadow-[0_2px_12px_rgba(0,0,0,0.08)]",
+          isListening && "border-primary/70"
         )}
+      >
+        {/* Left: search / spinner icon */}
+        <div className="flex items-center pl-3.5 shrink-0">
+          {loading ? (
+            <Loader2 className="h-4 w-4 text-primary animate-spin" />
+          ) : (
+            <Search className={cn(
+              "h-4 w-4 transition-colors",
+              focused ? "text-primary" : "text-muted-foreground/60"
+            )} />
+          )}
+        </div>
 
-        <Input
+        {/* Input */}
+        <input
           ref={inputRef}
+          type="search"
           value={isListening && interimText ? interimText : query}
           onChange={(e) => { setQuery(e.target.value); setInterimText(""); }}
-          placeholder={isListening ? "Listening…" : "Search products, brands, categories…"}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={isListening ? "Listening…" : "Search products, brands…"}
           className={cn(
-            "pl-10 pr-20 h-10 rounded-full input-glass border border-border/40 bg-white/70 placeholder:text-muted-foreground/70 focus-visible:bg-white/90 focus-visible:border-primary/40 transition-fluid shadow-sm",
-            isListening && "border-primary/60 ring-2 ring-primary/20"
+            "flex-1 bg-transparent px-2.5 py-2.5 text-sm outline-none",
+            "placeholder:text-muted-foreground/50 text-foreground",
+            "[appearance:textfield] [&::-webkit-search-cancel-button]:hidden"
           )}
           disabled={loading}
         />
 
-        {/* Right side controls */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-          {/* Clear button */}
+        {/* Right: controls */}
+        <div className="flex items-center gap-1.5 pr-3">
+          {/* Clear */}
           {query && !loading && !isListening && (
             <button
               type="button"
               onClick={() => { setQuery(""); setInterimText(""); inputRef.current?.focus(); }}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground/60 hover:text-foreground transition-colors p-0.5"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
 
-          {/* Mic button — only shown if browser supports speech API */}
+          {/* Divider */}
+          <div className="w-px h-4 bg-border/60" />
+
+          {/* Mic */}
           {voiceSupported && (
             <button
               type="button"
               onClick={startVoice}
-              aria-label={isListening ? "Stop listening" : "Search by voice"}
+              aria-label={isListening ? "Stop listening" : "Voice search"}
               className={cn(
-                "relative flex items-center justify-center h-6 w-6 rounded-full transition-colors",
+                "relative flex items-center justify-center h-7 w-7 rounded-full transition-all",
                 isListening
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               )}
             >
-              {/* Pulse ring while listening */}
               {isListening && (
-                <>
-                  <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
-                  <span className="absolute inset-0 rounded-full bg-primary/10" />
-                </>
+                <span className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
               )}
               {isListening ? (
                 <MicOff className="h-3.5 w-3.5 relative z-10" />
               ) : (
-                <Mic className="h-3.5 w-3.5 relative z-10" />
+                <Mic className="h-3.5 w-3.5" />
               )}
             </button>
           )}
 
-          {/* AI badge */}
-          <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white flex items-center gap-0.5 select-none"
-            style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+          {/* AI Search button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className={cn(
+              "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold",
+              "text-white select-none transition-all duration-200",
+              "hover:opacity-90 active:scale-95 disabled:opacity-60"
+            )}
+            style={{ background: "linear-gradient(135deg, #8B1A2E 0%, #c0392b 60%, #e74c3c 100%)" }}
           >
-            <Sparkles className="h-2.5 w-2.5" />
+            <Sparkles className="h-3 w-3" />
             AI
-          </span>
+          </button>
         </div>
       </div>
 
-      {/* Listening status hint */}
+      {/* Listening hint */}
       {isListening && (
-        <p className="text-[11px] text-primary mt-1 ml-3 animate-pulse">
-          Speak now — say what you're looking for…
+        <p className="text-[11px] text-primary mt-1.5 ml-4 animate-pulse font-medium">
+          🎙 Speak now — say what you're looking for…
         </p>
       )}
     </form>

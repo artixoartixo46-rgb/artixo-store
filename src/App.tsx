@@ -32,6 +32,7 @@ const FitAnalysis     = lazy(() => import("./pages/FitAnalysis"));
 const SellerStorefront   = lazy(() => import("./pages/SellerStorefront"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const OutfitBuilder      = lazy(() => import("./pages/OutfitBuilder"));
+const Rentals            = lazy(() => import("./pages/Rentals"));
 const NotFound           = lazy(() => import("./pages/NotFound"));
 
 // Capture ?ref= referral code on any page load
@@ -135,6 +136,7 @@ const App = () => {
                     <Route path="/product/:id/fit-analysis" element={<FitAnalysis />} />
                     <Route path="/affiliate"              element={<AffiliateDashboard />} />
                     <Route path="/outfit-builder"         element={<OutfitBuilder />} />
+                    <Route path="/rentals"                element={<Rentals />} />
                     <Route path="*"                       element={<NotFound />} />
                   </Routes>
                 </Suspense>

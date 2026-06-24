@@ -39,6 +39,12 @@ const emptyForm = {
   sizes: "",
   video_url: "",
   model_url: "",
+  // Rental fields
+  listing_type: "sale" as "sale" | "rent" | "both",
+  rent_price_per_day: "",
+  rent_price_per_week: "",
+  rent_deposit: "",
+  min_rent_days: "1",
 };
 
 const SellerDashboard = () => {
@@ -562,6 +568,12 @@ const SellerDashboard = () => {
       images: form.images, brand: form.brand || null, sku: form.sku || null,
       model_url: form.model_url.trim() || null,
       variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
+      // Rental fields
+      listing_type: form.listing_type,
+      rent_price_per_day: form.rent_price_per_day ? parseFloat(form.rent_price_per_day) : null,
+      rent_price_per_week: form.rent_price_per_week ? parseFloat(form.rent_price_per_week) : null,
+      rent_deposit: form.rent_deposit ? parseFloat(form.rent_deposit) : null,
+      min_rent_days: form.min_rent_days ? parseInt(form.min_rent_days) : 1,
     };
     const { error } = editing
       ? await supabase.from("products").update(payload).eq("id", editing.id)
@@ -1172,6 +1184,32 @@ const SellerDashboard = () => {
               <div><Label>Original Price</Label><Input type="number" min="0" step="0.01" placeholder="For discount" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
               <div><Label>Stock *</Label><Input required type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
             </div>
+            {/* ── Listing Type ── */}
+            <div>
+              <Label>Listing Type</Label>
+              <Select value={form.listing_type} onValueChange={(v) => setForm({ ...form, listing_type: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sale">🛒 For Sale Only</SelectItem>
+                  <SelectItem value="rent">🔄 For Rent Only</SelectItem>
+                  <SelectItem value="both">🛒🔄 For Sale & Rent</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ── Rental pricing — shown only if listing_type includes rent ── */}
+            {(form.listing_type === "rent" || form.listing_type === "both") && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 space-y-3">
+                <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">🔄 Rental Pricing</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label className="text-xs">Price / Day (LKR) *</Label><Input type="number" min="0" step="0.01" placeholder="e.g. 500" value={form.rent_price_per_day} onChange={(e) => setForm({ ...form, rent_price_per_day: e.target.value })} /></div>
+                  <div><Label className="text-xs">Price / Week (LKR)</Label><Input type="number" min="0" step="0.01" placeholder="Optional discount" value={form.rent_price_per_week} onChange={(e) => setForm({ ...form, rent_price_per_week: e.target.value })} /></div>
+                  <div><Label className="text-xs">Security Deposit (LKR)</Label><Input type="number" min="0" step="0.01" placeholder="Refundable" value={form.rent_deposit} onChange={(e) => setForm({ ...form, rent_deposit: e.target.value })} /></div>
+                  <div><Label className="text-xs">Min Rental Days</Label><Input type="number" min="1" max="365" value={form.min_rent_days} onChange={(e) => setForm({ ...form, min_rent_days: e.target.value })} /></div>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label>Category</Label>
               <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>

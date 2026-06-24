@@ -157,8 +157,28 @@ const Index = () => {
       {/* CTA banner */}
       <section className="container py-12">
         <Card className="gradient-saffron text-primary-foreground p-8 md:p-12 text-center border-0 shadow-glow">
+          {/* Promo banners */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+
+          {/* Rental Marketplace promo */}
+          <Link to="/rentals">
+            <div className="rounded-2xl p-4 flex items-center gap-3 text-white relative overflow-hidden h-full"
+              style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)" }}>
+              <span className="text-4xl">🔄</span>
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">New ✨</p>
+                <h3 className="font-display text-base font-extrabold leading-tight">Rent Anything</h3>
+                <p className="text-white/70 text-xs mt-0.5">Cameras, dresses & more by the day</p>
+              </div>
+              <div className="shrink-0 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-bold">
+                Browse →
+              </div>
+              <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
+            </div>
+          </Link>
+
           {/* AI Outfit Builder promo */}
-          <Link to="/outfit-builder" className="block mb-6">
+          <Link to="/outfit-builder" className="block">
             <div className="rounded-2xl p-5 flex items-center gap-4 text-white relative overflow-hidden"
               style={{ background: "linear-gradient(135deg, #8B1A2E 0%, #c0392b 55%, #FFD100 100%)" }}>
               <span className="text-5xl">👗</span>
@@ -173,6 +193,8 @@ const Index = () => {
               <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
             </div>
           </Link>
+
+          </div>{/* end promo grid */}
 
           <h3 className="font-display text-2xl md:text-4xl font-bold mb-3">Got products to sell?</h3>
           <p className="opacity-90 mb-6 max-w-xl mx-auto">Reach thousands of Sri Lankan shoppers. Open your shop in minutes — completely free to start.</p>

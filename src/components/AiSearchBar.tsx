@@ -79,7 +79,7 @@ Rules:
   }
 }
 
-export const AiSearchBar = () => {
+export const AiSearchBar = ({ onSearch }: { onSearch?: () => void } = {}) => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -91,6 +91,7 @@ export const AiSearchBar = () => {
     if (!trimmed) return;
 
     setInterimText("");
+    onSearch?.();
 
     if (!isNaturalLanguage(trimmed)) {
       navigate(`/products?q=${encodeURIComponent(trimmed)}`);
@@ -141,7 +142,7 @@ export const AiSearchBar = () => {
   const isListening = voiceState === "listening";
 
   return (
-    <form onSubmit={handleSearch} className="flex-1 max-w-2xl">
+    <form onSubmit={handleSearch} className="flex-1 w-full max-w-2xl">
       <div className="relative">
         {/* Left icon — spinner while loading or AI processing voice */}
         {loading ? (

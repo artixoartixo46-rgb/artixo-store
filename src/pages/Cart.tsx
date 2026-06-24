@@ -61,28 +61,28 @@ const Cart = () => {
   const finalTotal = Math.max(0, total - (applied?.discount ?? 0));
 
   return (
-    <div className="container py-8">
-      <h1 className="font-display text-3xl mb-6">Your Cart ({items.length})</h1>
-      <div className="grid lg:grid-cols-[1fr_360px] gap-6">
+    <div className="container py-5 md:py-8">
+      <h1 className="font-display text-2xl md:text-3xl mb-4 md:mb-6">Your Cart ({items.length})</h1>
+      <div className="grid lg:grid-cols-[1fr_360px] gap-4 md:gap-6">
         <div className="space-y-3">
           {items.map((it) => (
-            <Card key={it.id} className="p-4 flex gap-4">
-              <Link to={`/product/${it.product.id}`} className="h-24 w-24 rounded-lg overflow-hidden bg-muted shrink-0">
+            <Card key={it.id} className="p-3 md:p-4 flex gap-3 md:gap-4">
+              <Link to={`/product/${it.product.id}`} className="h-20 w-20 md:h-24 md:w-24 rounded-lg overflow-hidden bg-muted shrink-0">
                 {it.product.image_url ? <img src={it.product.image_url} alt={it.product.name} className="h-full w-full object-cover" /> : <div className="h-full w-full flex items-center justify-center"><Package className="h-8 w-8 text-muted-foreground" /></div>}
               </Link>
               <div className="flex-1 min-w-0">
-                <Link to={`/product/${it.product.id}`} className="font-medium hover:text-primary line-clamp-2">{it.product.name}</Link>
-                <div className="text-primary font-bold mt-1">{formatLKR(it.product.price)}</div>
+                <Link to={`/product/${it.product.id}`} className="font-medium text-sm md:text-base hover:text-primary line-clamp-2">{it.product.name}</Link>
+                <div className="text-primary font-bold mt-1 text-sm md:text-base">{formatLKR(it.product.price)}</div>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center border rounded-md">
-                    <button onClick={() => update(it.id, it.quantity - 1)} className="px-2 py-1 hover:bg-muted">−</button>
-                    <span className="px-3 text-sm">{it.quantity}</span>
-                    <button onClick={() => update(it.id, Math.min(it.product.stock, it.quantity + 1))} className="px-2 py-1 hover:bg-muted">+</button>
+                    <button onClick={() => update(it.id, it.quantity - 1)} className="px-2 py-1 hover:bg-muted text-sm">−</button>
+                    <span className="px-2 text-sm">{it.quantity}</span>
+                    <button onClick={() => update(it.id, Math.min(it.product.stock, it.quantity + 1))} className="px-2 py-1 hover:bg-muted text-sm">+</button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => remove(it.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(it.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                 </div>
               </div>
-              <div className="font-display font-bold text-right">{formatLKR(it.product.price * it.quantity)}</div>
+              <div className="font-display font-bold text-right text-sm md:text-base whitespace-nowrap">{formatLKR(it.product.price * it.quantity)}</div>
             </Card>
           ))}
         </div>

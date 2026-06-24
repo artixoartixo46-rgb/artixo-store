@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingCart, User, LogOut, Store, Shield, Settings, Gift } from "lucide-react";
+import { ShoppingCart, User, LogOut, Store, Shield, Settings, Gift, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,20 +20,36 @@ export const Header = () => {
   const { settings } = useSiteSettings();
   const navigate = useNavigate();
   const logoSrc = settings.site_logo || artixoLogo;
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const isSeller = roles.includes("seller");
   const isAdmin = roles.includes("admin");
 
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
-      <div className="container flex h-16 items-center gap-4">
+      {/* Main header row */}
+      <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-14 md:h-16 w-auto max-w-[140px] object-contain" />
+          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-10 md:h-14 w-auto max-w-[100px] md:max-w-[140px] object-contain" />
         </Link>
 
-        <AiSearchBar />
+        {/* Desktop search — hidden on small screens */}
+        <div className="hidden sm:flex flex-1">
+          <AiSearchBar />
+        </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-0.5 sm:gap-1 ml-auto">
+          {/* Mobile search toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="sm:hidden"
+            onClick={() => setMobileSearchOpen((v) => !v)}
+            aria-label="Search"
+          >
+            {mobileSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </Button>
+
           {user && <NotificationBell />}
           {user && <PushNotificationBell />}
           {!isAdmin && (
@@ -93,11 +110,18 @@ export const Header = () => {
             </DropdownMenu>
           ) : (
             <Link to="/auth">
-              <Button variant="hero" size="sm">Sign in</Button>
+              <Button variant="hero" size="sm" className="text-xs sm:text-sm px-3 sm:px-4">Sign in</Button>
             </Link>
           )}
         </div>
       </div>
+
+      {/* Mobile search bar — full width, slides in below header */}
+      {mobileSearchOpen && (
+        <div className="sm:hidden border-t border-white/20 px-3 py-2 bg-background/80 backdrop-blur-md">
+          <AiSearchBar onSearch={() => setMobileSearchOpen(false)} />
+        </div>
+      )}
     </header>
   );
 };

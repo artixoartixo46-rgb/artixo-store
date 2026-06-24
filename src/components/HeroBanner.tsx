@@ -30,7 +30,10 @@ export const HeroBanner = () => {
   const [idx, setIdx] = useState(0);
   const { settings } = useSiteSettings();
   const bannerH = settings.banner_height || "600";
-  const bannerStyle = bannerH === "100vh" ? { height: "100vh" } : { height: `${bannerH}px` };
+  // On mobile, cap the banner at 55vw minimum height so it doesn't feel too tall or too short
+  const bannerStyle = bannerH === "100vh"
+    ? { height: "100svh" }
+    : { height: `clamp(260px, 45vw, ${bannerH}px)` };
   const objectFit = (settings.banner_object_fit || "cover") as React.CSSProperties["objectFit"];
   const objectPosition = settings.banner_object_position || "center";
   const overlayOpacity = Number(settings.banner_overlay_opacity ?? 50) / 100;
@@ -101,11 +104,11 @@ export const HeroBanner = () => {
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold" style={{ color: textColor }}>
                 🇱🇰 Sri Lanka's #1 Marketplace
               </div>
-              <h1 className="font-display text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
+              <h1 className="font-display text-2xl sm:text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
                 {b.title ?? "Shop everything island-wide"}
               </h1>
               {b.subtitle && (
-                <p className="text-lg opacity-90 max-w-md drop-shadow">{b.subtitle}</p>
+                <p className="text-sm sm:text-lg opacity-90 max-w-md drop-shadow hidden sm:block">{b.subtitle}</p>
               )}
               <div className="flex flex-wrap gap-3" style={{ justifyContent: textPosition === "center" ? "center" : textPosition === "right" ? "flex-end" : "flex-start" }}>
                 <Link to={b.linkUrl ?? "/products"}>

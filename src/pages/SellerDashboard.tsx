@@ -579,48 +579,50 @@ const SellerDashboard = () => {
     toast.success("Deleted"); refresh();
   };
   return (
-    <div className="container py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div className="container py-5 md:py-8">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h1 className="font-display text-3xl">Seller Dashboard</h1>
-          <p className="text-muted-foreground">Manage your products</p>
+          <h1 className="font-display text-2xl md:text-3xl">Seller Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Manage your products</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {user && (
             <Button variant="outline" size="sm" asChild>
               <Link to={`/seller/${user.id}`} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" /> View Shop
+                <ExternalLink className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">View </span>Shop
               </Link>
             </Button>
           )}
-          <Button variant="hero" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
+          <Button variant="hero" size="sm" onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Product</Button>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4 mb-6">
-        <Card className="p-4"><div className="text-xs text-muted-foreground">Total Products</div><div className="font-display text-2xl">{products.length}</div></Card>
-        <Card className="p-4"><div className="text-xs text-muted-foreground">Live</div><div className="font-display text-2xl text-success">{products.filter((p) => p.status === "approved").length}</div></Card>
-        <Card className="p-4"><div className="text-xs text-muted-foreground">Pending Approval</div><div className="font-display text-2xl text-primary">{products.filter((p) => p.status === "pending").length}</div></Card>
+      <div className="grid grid-cols-3 gap-3 md:gap-4 mb-5">
+        <Card className="p-3 md:p-4"><div className="text-xs text-muted-foreground">Products</div><div className="font-display text-xl md:text-2xl">{products.length}</div></Card>
+        <Card className="p-3 md:p-4"><div className="text-xs text-muted-foreground">Live</div><div className="font-display text-xl md:text-2xl text-success">{products.filter((p) => p.status === "approved").length}</div></Card>
+        <Card className="p-3 md:p-4"><div className="text-xs text-muted-foreground">Pending</div><div className="font-display text-xl md:text-2xl text-primary">{products.filter((p) => p.status === "pending").length}</div></Card>
       </div>
 
       <Tabs defaultValue="products">
-        <TabsList className="mb-4">
-          <TabsTrigger value="products"><Package className="h-4 w-4 mr-1" /> Products</TabsTrigger>
-          <TabsTrigger value="orders"><ShoppingBag className="h-4 w-4 mr-1" /> Orders ({orders.length})</TabsTrigger>
-          <TabsTrigger value="analytics"><BarChart2 className="h-4 w-4 mr-1" /> Analytics</TabsTrigger>
-          <TabsTrigger value="verification">
-            <BadgeCheck className="h-4 w-4 mr-1 text-blue-500" /> Verification
-          </TabsTrigger>
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-1" /> Profile
-          </TabsTrigger>
-          <TabsTrigger value="earnings">
-            <Wallet className="h-4 w-4 mr-1" /> Earnings
-          </TabsTrigger>
-          <TabsTrigger value="commission">
-            <Banknote className="h-4 w-4 mr-1" /> Commission Wallet
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto scrollbar-none -mx-1 px-1 mb-4">
+          <TabsList className="w-max min-w-full flex">
+            <TabsTrigger value="products" className="shrink-0"><Package className="h-4 w-4 mr-1" /> Products</TabsTrigger>
+            <TabsTrigger value="orders" className="shrink-0"><ShoppingBag className="h-4 w-4 mr-1" /> Orders ({orders.length})</TabsTrigger>
+            <TabsTrigger value="analytics" className="shrink-0"><BarChart2 className="h-4 w-4 mr-1" /> Analytics</TabsTrigger>
+            <TabsTrigger value="verification" className="shrink-0">
+              <BadgeCheck className="h-4 w-4 mr-1 text-blue-500" /> Verify
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="shrink-0">
+              <User className="h-4 w-4 mr-1" /> Profile
+            </TabsTrigger>
+            <TabsTrigger value="earnings" className="shrink-0">
+              <Wallet className="h-4 w-4 mr-1" /> Earnings
+            </TabsTrigger>
+            <TabsTrigger value="commission" className="shrink-0">
+              <Banknote className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Commission </span>Wallet
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="products">
           {products.length === 0 ? (

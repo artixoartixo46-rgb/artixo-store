@@ -63,7 +63,7 @@ const Index = () => {
       <HeroBanner />
 
       {/* Trust badges */}
-      <section className="container py-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+      <section className="container py-6 md:py-8 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
           { icon: Truck, title: "Island-wide Delivery", desc: "All 25 districts" },
           { icon: CreditCard, title: "Cash on Delivery", desc: "Pay when you receive" },
@@ -89,7 +89,7 @@ const Index = () => {
             <h2 className="font-display text-2xl md:text-3xl">Shop by Category</h2>
             <Link to="/products" className="text-sm text-primary hover:underline">View all →</Link>
           </div>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 md:gap-3">
             {categories.map((c) => (
               <Link key={c.id} to={`/products?category=${c.slug}`}>
                 <Card className="p-4 text-center hover:shadow-glow hover:-translate-y-1 transition-bounce border-border/60 h-full flex flex-col items-center justify-center gap-2">
@@ -123,7 +123,7 @@ const Index = () => {
             <h2 className="font-display text-2xl md:text-3xl">🔥 Trending Now</h2>
             <Link to="/products" className="text-sm text-primary hover:underline">See all →</Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
             {trending.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         </section>
@@ -142,7 +142,7 @@ const Index = () => {
             No products yet. Sellers — start uploading! 🛍️
           </Card>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
             {newArrivals.map((p) => <ProductCard key={p.id} p={p} />)}
           </div>
         )}

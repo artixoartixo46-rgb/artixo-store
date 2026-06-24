@@ -206,6 +206,13 @@
   .transition-spring { transition: var(--transition-spring); }
   .transition-fluid  { transition: var(--transition-fluid); }
 
+  /* ── Scrollbar hide (for tab bars, carousels) ── */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
   /* ── Animation utilities ── */
   .animate-fade-in  { animation: fade-in 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
   .animate-slide-up { animation: slide-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }

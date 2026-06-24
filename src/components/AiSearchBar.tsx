@@ -155,9 +155,9 @@ export const AiSearchBar = ({ onSearch }: { onSearch?: () => void } = {}) => {
           ref={inputRef}
           value={isListening && interimText ? interimText : query}
           onChange={(e) => { setQuery(e.target.value); setInterimText(""); }}
-          placeholder={isListening ? "Listening…" : 'Try "cheap phones under 15000 LKR" or "Nike shoes"…'}
+          placeholder={isListening ? "Listening…" : "Search products, brands, categories…"}
           className={cn(
-            "pl-10 pr-24 h-10 rounded-full input-glass border-transparent focus-visible:bg-white/80 focus-visible:border-white/60 transition-fluid",
+            "pl-10 pr-20 h-10 rounded-full input-glass border border-border/40 bg-white/70 placeholder:text-muted-foreground/70 focus-visible:bg-white/90 focus-visible:border-primary/40 transition-fluid shadow-sm",
             isListening && "border-primary/60 ring-2 ring-primary/20"
           )}
           disabled={loading}

@@ -119,7 +119,7 @@ export const HeroBanner = () => {
             <Button variant="hero" size="lg">{b.ctaText ?? "Shop Now"}</Button>
           </Link>
           <Link to="/become-seller">
-            <Button variant="outline" size="lg" className="bg-background/10 border-background/30 text-secondary-foreground hover:bg-background/20">
+            <Button size="lg" style={{ background: "rgba(255,255,255,0.15)", border: "2px solid white", color: "white", backdropFilter: "blur(8px)" }}>
               Sell with Us
             </Button>
           </Link>

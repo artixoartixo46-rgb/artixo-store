@@ -36,6 +36,7 @@ export interface SiteSettings {
   currency_symbol: string;
   vat_percentage: string;
   tax_inclusive: string;
+  default_commission_rate: string;
   show_flash_sale: string;
   show_newsletter: string;
   show_why_shop: string;
@@ -75,6 +76,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   currency_symbol: "Rs.",
   vat_percentage: "0",
   tax_inclusive: "true",
+  default_commission_rate: "5",
   primary_color: "#FFD100",
   secondary_color: "#8D153A",
   accent_color: "#0D9488",

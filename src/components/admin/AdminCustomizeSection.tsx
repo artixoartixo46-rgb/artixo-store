@@ -655,6 +655,39 @@ export const AdminCustomizeSection = () => {
                   </p>
                 )}
               </div>
+
+              {/* Commission Rate */}
+              <div className="border-t border-gray-100 pt-4 mt-4">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Default Seller Commission Rate</p>
+                  <span className="text-lg font-bold text-rose-700">{draft.default_commission_rate}%</span>
+                </div>
+                <input type="range" min="1" max="20" step="0.5"
+                  value={draft.default_commission_rate}
+                  onChange={(e) => update("default_commission_rate", e.target.value)}
+                  className="w-full accent-[#8D153A]" />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-3">
+                  <span>1% (Very low)</span><span>20% (High)</span>
+                </div>
+                <Field label="Custom Rate %" value={draft.default_commission_rate} onChange={(v) => update("default_commission_rate", v)} placeholder="5" type="number" />
+
+                {/* Competitor comparison */}
+                <div className="mt-2 rounded-xl overflow-hidden border border-gray-200 text-xs">
+                  <div className="bg-gray-50 px-3 py-2 font-semibold text-gray-600">Competitor Comparison</div>
+                  {[
+                    { name: "Daraz Sri Lanka", rate: "10–15%", color: "text-red-600" },
+                    { name: "Kapruka", rate: "12–18%", color: "text-red-500" },
+                    { name: "ikman.lk", rate: "8–12%", color: "text-orange-500" },
+                    { name: "ARTIXO (yours)", rate: `${draft.default_commission_rate}%`, color: "text-green-600 font-bold" },
+                  ].map((c) => (
+                    <div key={c.name} className="flex justify-between items-center px-3 py-2 border-t border-gray-100">
+                      <span className="text-gray-700">{c.name}</span>
+                      <span className={c.color}>{c.rate}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-2">This rate applies to all new sellers. Existing sellers keep their individual rate from the database.</p>
+              </div>
             </>
           )}
 

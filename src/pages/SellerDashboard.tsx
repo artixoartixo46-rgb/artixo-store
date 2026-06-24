@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ const emptyForm = {
 
 const SellerDashboard = () => {
   const { user, roles, loading: authLoading } = useAuth();
+  const { settings } = useSiteSettings();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -99,7 +101,7 @@ const SellerDashboard = () => {
     const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", user.id).maybeSingle();
     if (profile) {
       setSellerBalance(Number(profile.seller_balance ?? 0));
-      setCommissionRate(Number(profile.commission_rate ?? 8));
+      setCommissionRate(Number(profile.commission_rate ?? settings.default_commission_rate ?? 5));
     }
     const { data: wds } = await (supabase as any).from("withdrawals").select("*").eq("seller_id", user.id).order("requested_at", { ascending: false });
     setWithdrawals(wds ?? []);
@@ -330,7 +332,7 @@ const SellerDashboard = () => {
         ?.reduce((s: number, it: any) => s + Number(it.unitPrice) * it.quantity, 0) ?? 0;
       if (myTotal > 0) {
         const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", user!.id).maybeSingle();
-        const rate = Number(profile?.commission_rate ?? 8);
+        const rate = Number(profile?.commission_rate ?? settings.default_commission_rate ?? 5);
         const commission = myTotal * (rate / 100);
         const net = myTotal - commission;
         const newBalance = Number(profile?.seller_balance ?? 0) + net;

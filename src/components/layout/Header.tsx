@@ -36,7 +36,7 @@ export const Header = () => {
         }}
       >
         {/* Main row */}
-        <div className="flex items-center px-3 h-14">
+        <div className="flex items-center px-3 h-14 gap-2">
 
           {/* Logo */}
           <Link to="/" className="shrink-0">
@@ -47,15 +47,16 @@ export const Header = () => {
             />
           </Link>
 
-          <div className="flex-1" />
-
-          {/* Desktop search bar (hidden on mobile) */}
-          <div className="hidden sm:flex flex-1 max-w-xl mx-4">
+          {/* Desktop search bar — fills the middle */}
+          <div className="hidden sm:flex flex-1 mx-2">
             <AiSearchBar />
           </div>
 
+          {/* Mobile: push icons to right */}
+          <div className="flex-1 sm:hidden" />
+
           {/* Icons */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 shrink-0">
 
             {/* Search icon — mobile only */}
             <button

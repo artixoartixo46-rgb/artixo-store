@@ -69,16 +69,18 @@ export const HeroBanner = () => {
 
   return (
     <section className="relative overflow-hidden">
-      <div className="relative w-full" style={bannerStyle}>
+      <div className="relative w-full">
         <img
           key={b.id}
           src={b.imageUrl}
           alt={b.title ?? "Banner"}
-          className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+          className="w-full h-auto block animate-fade-in"
+          style={{ maxHeight: bannerH === "100vh" ? "100vh" : `${bannerH}px`, objectFit: "contain" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
 
-        <div className="relative container h-full flex items-center">
+        <div className="absolute inset-0 flex items-center">
+          <div className="container">
           <div className="max-w-2xl space-y-6 text-white animate-fade-in" key={`c-${b.id}`}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold text-white">
               🇱🇰 Sri Lanka's #1 Marketplace
@@ -99,6 +101,7 @@ export const HeroBanner = () => {
                 </Button>
               </Link>
             </div>
+          </div>
           </div>
         </div>
 

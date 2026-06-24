@@ -30,9 +30,18 @@ export const HeroBanner = () => {
   const [idx, setIdx] = useState(0);
   const { settings } = useSiteSettings();
   const bannerH = settings.banner_height || "600";
-  const bannerStyle = bannerH === "100vh"
-    ? { height: "100vh" }
-    : { height: `${bannerH}px` };
+  const bannerStyle = bannerH === "100vh" ? { height: "100vh" } : { height: `${bannerH}px` };
+  const objectFit = (settings.banner_object_fit || "cover") as React.CSSProperties["objectFit"];
+  const objectPosition = settings.banner_object_position || "center";
+  const overlayOpacity = Number(settings.banner_overlay_opacity ?? 50) / 100;
+  const showText = settings.banner_show_text !== "false";
+  const textPosition = settings.banner_text_position || "left";
+  const textColor = settings.banner_text_color || "#ffffff";
+  const textAlign: React.CSSProperties = textPosition === "center"
+    ? { alignItems: "center", textAlign: "center" }
+    : textPosition === "right"
+    ? { alignItems: "flex-end", textAlign: "right" }
+    : { alignItems: "flex-start", textAlign: "left" };
 
   useEffect(() => {
     supabase
@@ -74,33 +83,43 @@ export const HeroBanner = () => {
           key={b.id}
           src={b.imageUrl}
           alt={b.title ?? "Banner"}
-          className="absolute inset-0 w-full h-full object-cover animate-fade-in"
+          className="absolute inset-0 w-full h-full animate-fade-in"
+          style={{ objectFit, objectPosition }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/20 to-transparent" />
+        <div
+          className="absolute inset-0"
+          style={{ background: `rgba(0,0,0,${overlayOpacity})` }}
+        />
 
-        <div className="relative container h-full flex items-center">
-          <div className="max-w-2xl space-y-6 text-white animate-fade-in" key={`c-${b.id}`}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold text-white">
-              🇱🇰 Sri Lanka's #1 Marketplace
-            </div>
-            <h1 className="font-display text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
-              {b.title ?? "Shop everything island-wide"}
-            </h1>
-            {b.subtitle && (
-              <p className="text-lg opacity-90 max-w-md drop-shadow">{b.subtitle}</p>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Link to={b.linkUrl ?? "/products"}>
-                <Button variant="hero" size="lg">{b.ctaText ?? "Shop Now"}</Button>
-              </Link>
-              <Link to="/become-seller">
-                <Button variant="outline" size="lg" className="bg-white/10 border-white/50 text-white hover:bg-white/20">
-                  Sell with Us
-                </Button>
-              </Link>
+        {showText && (
+          <div className="relative container h-full flex items-center">
+            <div
+              className="max-w-2xl space-y-6 animate-fade-in"
+              key={`c-${b.id}`}
+              style={{ color: textColor, ...textAlign }}
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold" style={{ color: textColor }}>
+                🇱🇰 Sri Lanka's #1 Marketplace
+              </div>
+              <h1 className="font-display text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
+                {b.title ?? "Shop everything island-wide"}
+              </h1>
+              {b.subtitle && (
+                <p className="text-lg opacity-90 max-w-md drop-shadow">{b.subtitle}</p>
+              )}
+              <div className="flex flex-wrap gap-3" style={{ justifyContent: textPosition === "center" ? "center" : textPosition === "right" ? "flex-end" : "flex-start" }}>
+                <Link to={b.linkUrl ?? "/products"}>
+                  <Button variant="hero" size="lg">{b.ctaText ?? "Shop Now"}</Button>
+                </Link>
+                <Link to="/become-seller">
+                  <Button variant="outline" size="lg" className="bg-white/10 border-white/50 text-white hover:bg-white/20">
+                    Sell with Us
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {banners.length > 1 && (
           <>

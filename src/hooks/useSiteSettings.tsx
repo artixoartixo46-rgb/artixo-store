@@ -16,6 +16,12 @@ export interface SiteSettings {
   announcement_bg: string;
   announcement_link: string;
   banner_height: string;
+  banner_object_fit: string;
+  banner_object_position: string;
+  banner_overlay_opacity: string;
+  banner_show_text: string;
+  banner_text_position: string;
+  banner_text_color: string;
   show_flash_sale: string;
   show_newsletter: string;
   show_why_shop: string;
@@ -35,6 +41,12 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   support_phone: "+94 11 000 0000",
   address: "Colombo, Sri Lanka",
   site_logo: "",
+  banner_object_fit: "cover",
+  banner_object_position: "center",
+  banner_overlay_opacity: "50",
+  banner_show_text: "true",
+  banner_text_position: "left",
+  banner_text_color: "#ffffff",
   primary_color: "#FFD100",
   secondary_color: "#8D153A",
   accent_color: "#0D9488",

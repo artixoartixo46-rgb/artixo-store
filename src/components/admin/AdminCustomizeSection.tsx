@@ -351,24 +351,129 @@ export const AdminCustomizeSection = () => {
           {/* ── Banner ── */}
           {tab === "banner" && (
             <>
-              <SectionTitle title="Hero Banner Height" desc="Controls the height of the main banner on the homepage" />
-              <div className="grid grid-cols-5 gap-2 mb-4">
+              <SectionTitle title="Hero Banner" desc="Full control over the homepage banner size, style & text" />
+
+              {/* Height */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Height</p>
+              <div className="grid grid-cols-5 gap-2 mb-3">
                 {BANNER_PRESETS.map((p) => (
-                  <button
-                    key={p.value}
-                    onClick={() => update("banner_height", p.value)}
+                  <button key={p.value} onClick={() => update("banner_height", p.value)}
                     className="py-2.5 rounded-2xl text-sm font-medium transition-all"
-                    style={
-                      draft.banner_height === p.value
-                        ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
-                        : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }
-                    }
-                  >
+                    style={draft.banner_height === p.value
+                      ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                      : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>
                     {p.label}
                   </button>
                 ))}
               </div>
               <Field label="Custom Height (px or 100vh)" value={draft.banner_height} onChange={(v) => update("banner_height", v)} placeholder="600" />
+
+              {/* Image Fit */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4">Image Fit</p>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {[
+                  { label: "Cover (Fill)", value: "cover", desc: "Fills container, may crop" },
+                  { label: "Contain (Full)", value: "contain", desc: "Full image, may have gaps" },
+                  { label: "Fill (Stretch)", value: "fill", desc: "Stretches to fit exactly" },
+                ].map((o) => (
+                  <button key={o.value} onClick={() => update("banner_object_fit", o.value)}
+                    className="py-2.5 px-3 rounded-2xl text-left transition-all"
+                    style={draft.banner_object_fit === o.value
+                      ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                      : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>
+                    <p className="text-xs font-semibold">{o.label}</p>
+                    <p className="text-[10px] opacity-70 mt-0.5">{o.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Image Position */}
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Image Position</p>
+              <div className="grid grid-cols-5 gap-2 mb-4">
+                {["top", "center", "bottom", "left", "right"].map((pos) => (
+                  <button key={pos} onClick={() => update("banner_object_position", pos)}
+                    className="py-2 rounded-2xl text-xs font-medium capitalize transition-all"
+                    style={draft.banner_object_position === pos
+                      ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                      : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>
+                    {pos}
+                  </button>
+                ))}
+              </div>
+
+              {/* Overlay Opacity */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Dark Overlay Opacity</p>
+                  <span className="text-sm font-bold text-gray-800">{draft.banner_overlay_opacity}%</span>
+                </div>
+                <input type="range" min="0" max="90" step="5"
+                  value={draft.banner_overlay_opacity}
+                  onChange={(e) => update("banner_overlay_opacity", e.target.value)}
+                  className="w-full accent-[#8D153A]" />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                  <span>0% (No overlay)</span><span>90% (Very dark)</span>
+                </div>
+              </div>
+
+              {/* Show/Hide Text */}
+              <div className="border-t border-gray-100 pt-4">
+                <Toggle label="Show Text Overlay" value={draft.banner_show_text === "true"}
+                  onChange={(v) => update("banner_show_text", v ? "true" : "false")}
+                  description="Show title, subtitle and buttons on the banner" />
+              </div>
+
+              {draft.banner_show_text === "true" && (
+                <>
+                  {/* Text Position */}
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 mt-4">Text Position</p>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: "← Left", value: "left" },
+                      { label: "Center", value: "center" },
+                      { label: "Right →", value: "right" },
+                    ].map((p) => (
+                      <button key={p.value} onClick={() => update("banner_text_position", p.value)}
+                        className="py-2.5 rounded-2xl text-sm font-medium transition-all"
+                        style={draft.banner_text_position === p.value
+                          ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                          : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Text Color */}
+                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Text Color</p>
+                      <p className="text-xs text-gray-400 font-mono">{draft.banner_text_color}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-xl border-2 border-gray-200 shadow-sm" style={{ background: draft.banner_text_color }} />
+                      <input type="color" value={draft.banner_text_color}
+                        onChange={(e) => update("banner_text_color", e.target.value)}
+                        className="h-9 w-9 rounded-xl border border-gray-200 cursor-pointer bg-transparent p-0.5" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Live Preview */}
+              <div className="mt-5 rounded-2xl overflow-hidden border border-gray-200" style={{ height: "120px", position: "relative", background: "#1a1a2e" }}>
+                <div className="absolute inset-0 flex items-center" style={{
+                  background: `rgba(0,0,0,${Number(draft.banner_overlay_opacity)/100})`,
+                  justifyContent: draft.banner_text_position === "center" ? "center" : draft.banner_text_position === "right" ? "flex-end" : "flex-start",
+                }}>
+                  {draft.banner_show_text === "true" && (
+                    <div className="px-5" style={{ color: draft.banner_text_color, textAlign: draft.banner_text_position as any }}>
+                      <p className="text-xs font-bold">🛍 Shop everything island-wide</p>
+                      <p className="text-[10px] opacity-70 mt-1">Preview of your banner text</p>
+                    </div>
+                  )}
+                </div>
+                <p className="absolute bottom-2 right-3 text-[10px] text-white/40">Preview</p>
+              </div>
             </>
           )}
 

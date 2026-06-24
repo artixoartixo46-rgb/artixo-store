@@ -31,9 +31,9 @@ interface AiResult {
   missing: string;     // what's missing
 }
 
-// ── Gemini call ────────────────────────────────────────────────────────
+// ── Groq call (free LLaMA 3.1) ─────────────────────────────────────────
 async function analyzeOutfit(slots: OutfitSlot[]): Promise<{ result: AiResult | null; error: string | null }> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey) {
     return { result: null, error: "AI key not configured. Please contact support." };
   }
@@ -46,11 +46,11 @@ async function analyzeOutfit(slots: OutfitSlot[]): Promise<{ result: AiResult | 
     .join("\n");
 
   const prompt = `You are a Sri Lankan fashion stylist AI for ARTIXO online store.
-Analyze this outfit combination and return ONLY raw JSON (no markdown):
+Analyze this outfit combination and return ONLY raw JSON (no markdown, no explanation):
 
 ${items}
 
-Return this exact JSON shape:
+Return EXACTLY this JSON shape:
 {
   "score": 8,
   "vibe": "Casual Chic",
@@ -60,38 +60,40 @@ Return this exact JSON shape:
 }
 
 Rules:
-- score = outfit harmony out of 10
+- score = outfit harmony out of 10 (integer)
 - vibe = 2-3 word style description
 - occasions = 2-3 best occasions for this outfit (Sri Lanka context)
 - tips = exactly 2 practical styling tips
 - missing = one thing that would complete the look (or "This outfit is complete!" if nothing needed)
-- Keep it fun, friendly, and relevant to Sri Lanka's climate and culture`;
+- Keep it fun, friendly, relevant to Sri Lanka's tropical climate`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
-        }),
-      }
-    );
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 400,
+      }),
+    });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      console.error("Gemini error:", res.status, errData);
+      console.error("Groq error:", res.status, errData);
       return { result: null, error: `AI error (${res.status}). Try again in a moment.` };
     }
     const data = await res.json();
-    const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const text: string = data?.choices?.[0]?.message?.content ?? "";
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return { result: null, error: "AI returned unexpected response. Please try again." };
     const parsed = JSON.parse(match[0]) as AiResult;
     return { result: parsed, error: null };
   } catch (e) {
-    console.error("Gemini fetch failed:", e);
+    console.error("Groq fetch failed:", e);
     return { result: null, error: "Network error. Check your connection and try again." };
   }
 }

@@ -30,9 +30,6 @@ export const HeroBanner = () => {
   const [idx, setIdx] = useState(0);
   const { settings } = useSiteSettings();
   const bannerH = settings.banner_height || "600";
-  const bannerStyle = bannerH === "100vh"
-    ? { height: "100vh" }
-    : { height: `${bannerH}px` };
 
   useEffect(() => {
     supabase
@@ -74,8 +71,8 @@ export const HeroBanner = () => {
           key={b.id}
           src={b.imageUrl}
           alt={b.title ?? "Banner"}
-          className="w-full h-auto block animate-fade-in"
-          style={{ maxHeight: bannerH === "100vh" ? "100vh" : `${bannerH}px`, objectFit: "contain" }}
+          className="w-full block animate-fade-in"
+          style={{ height: "auto", display: "block" }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent" />
 

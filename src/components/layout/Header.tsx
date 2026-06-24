@@ -1,7 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, LogOut, Store, Shield, Settings, Gift } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import {
@@ -24,33 +22,34 @@ export const Header = () => {
   const isAdmin = roles.includes("admin");
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-white/20 shadow-[0_2px_20px_rgba(0,0,0,0.08)]"
-      style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
+    <header
+      className="sticky top-0 z-40 w-full border-b border-black/8"
+      style={{
+        background: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        boxShadow: "0 1px 12px rgba(0,0,0,0.07)",
+      }}
     >
-      {/* ── Row 1: Logo + Actions ── */}
-      <div className="container flex h-14 items-center gap-2">
+      <div className="flex items-center gap-2 px-3 h-14">
 
         {/* Logo */}
-        <Link to="/" className="flex items-center shrink-0 mr-1">
+        <Link to="/" className="shrink-0">
           <img
             src={logoSrc}
             alt={settings.site_name || "Artixo"}
-            className="h-9 md:h-11 w-auto max-w-[80px] md:max-w-[130px] object-contain"
+            className="h-8 w-auto max-w-[64px] object-contain"
           />
         </Link>
 
-        {/* Desktop search bar */}
-        <div className="hidden sm:flex flex-1 max-w-xl">
+        {/* Search bar — full width, always visible on ALL screens */}
+        <div className="flex-1 min-w-0">
           <AiSearchBar />
         </div>
 
-        {/* Spacer on mobile */}
-        <div className="flex-1 sm:hidden" />
+        {/* Right icons */}
+        <div className="flex items-center gap-0.5 shrink-0">
 
-        {/* Action icons */}
-        <div className="flex items-center gap-0.5">
-
-          {/* Notification bells */}
           {user && <NotificationBell />}
           {user && <span className="hidden sm:inline-flex"><PushNotificationBell /></span>}
 
@@ -58,10 +57,12 @@ export const Header = () => {
           {!isAdmin && (
             <Link to="/cart">
               <button className="relative flex items-center justify-center h-9 w-9 rounded-full hover:bg-black/5 transition-colors">
-                <ShoppingCart className="h-5 w-5 text-foreground/80" />
+                <ShoppingCart className="h-5 w-5 text-foreground/75" />
                 {count > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4.5 min-w-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}>
+                  <span
+                    className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+                  >
                     {count}
                   </span>
                 )}
@@ -74,14 +75,18 @@ export const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center justify-center h-9 w-9 rounded-full hover:bg-black/5 transition-colors">
-                  <div className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                    style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}>
-                    {user.email?.[0]?.toUpperCase() ?? <User className="h-4 w-4" />}
+                  <div
+                    className="h-7 w-7 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+                  >
+                    {user.email?.[0]?.toUpperCase() ?? "U"}
                   </div>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 mt-1 rounded-2xl shadow-xl border border-white/60 bg-white/95 backdrop-blur-xl">
-                <DropdownMenuLabel className="truncate text-xs text-muted-foreground font-normal px-3 pt-3 pb-1">{user.email}</DropdownMenuLabel>
+                <DropdownMenuLabel className="truncate text-xs text-muted-foreground font-normal px-3 pt-3 pb-1">
+                  {user.email}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {isAdmin ? (
                   <DropdownMenuItem onClick={() => navigate("/admin")} className="rounded-xl mx-1">
@@ -116,18 +121,15 @@ export const Header = () => {
             </DropdownMenu>
           ) : (
             <Link to="/auth">
-              <button className="ml-1 text-xs font-semibold px-4 py-2 rounded-full text-white transition-all hover:opacity-90 active:scale-95"
-                style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}>
+              <button
+                className="ml-1 text-xs font-semibold px-3 py-1.5 rounded-full text-white transition-all hover:opacity-90 active:scale-95 whitespace-nowrap"
+                style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+              >
                 Sign in
               </button>
             </Link>
           )}
         </div>
-      </div>
-
-      {/* ── Row 2 (mobile only): Always-visible search bar ── */}
-      <div className="sm:hidden px-4 pb-3">
-        <AiSearchBar />
       </div>
     </header>
   );

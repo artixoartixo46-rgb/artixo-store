@@ -1,8 +1,17 @@
 import { Link } from "react-router-dom";
 import artixoLogo from "@/assets/artixo-logo.png";
 import { MapPin, Mail, Phone } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
-export const Footer = () => (
+export const Footer = () => {
+  const { settings } = useSiteSettings();
+  const copyright = (settings.footer_copyright || "© {year} ARTIXO — Made with ❤️ in Sri Lanka")
+    .replace("{year}", new Date().getFullYear().toString());
+  const email   = settings.footer_email   || "support@artixo.lk";
+  const phone   = settings.footer_phone   || "+94 11 000 0000";
+  const address = settings.footer_address || "Colombo, Sri Lanka 🇱🇰";
+
+  return (
   <footer className="mt-20 relative overflow-hidden" style={{
     background: "linear-gradient(135deg, hsl(343 73% 22%) 0%, hsl(343 73% 30%) 40%, hsl(35 100% 45%) 100%)"
   }}>
@@ -28,12 +37,18 @@ export const Footer = () => (
         <div className="space-y-2 text-sm text-white/65">
           <div className="flex items-center gap-2">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-yellow-300" />
-            <span>Colombo, Sri Lanka 🇱🇰</span>
+            <span>{address}</span>
           </div>
           <div className="flex items-center gap-2">
             <Mail className="h-3.5 w-3.5 shrink-0 text-yellow-300" />
-            <span>support@artixo.lk</span>
+            <span>{email}</span>
           </div>
+          {phone && (
+            <div className="flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 shrink-0 text-yellow-300" />
+              <span>{phone}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -118,7 +133,7 @@ export const Footer = () => (
     {/* Bottom bar */}
     <div className="relative border-t border-white/15">
       <div className="container py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/55">
-        <p>© {new Date().getFullYear()} ARTIXO — Made with ❤️ in Sri Lanka &nbsp;|&nbsp; All prices in LKR (Rs.)</p>
+        <p>{copyright}</p>
         <a
           href="https://artixo.com"
           target="_blank"
@@ -134,4 +149,5 @@ export const Footer = () => (
       </div>
     </div>
   </footer>
-);
+  );
+};

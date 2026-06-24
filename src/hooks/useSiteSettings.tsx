@@ -22,6 +22,20 @@ export interface SiteSettings {
   banner_show_text: string;
   banner_text_position: string;
   banner_text_color: string;
+  seo_title: string;
+  seo_description: string;
+  seo_og_image: string;
+  footer_copyright: string;
+  footer_email: string;
+  footer_phone: string;
+  footer_address: string;
+  maintenance_mode: string;
+  maintenance_title: string;
+  maintenance_message: string;
+  maintenance_eta: string;
+  currency_symbol: string;
+  vat_percentage: string;
+  tax_inclusive: string;
   show_flash_sale: string;
   show_newsletter: string;
   show_why_shop: string;
@@ -47,6 +61,20 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   banner_show_text: "true",
   banner_text_position: "left",
   banner_text_color: "#ffffff",
+  seo_title: "ARTIXO — Sri Lanka's Online Marketplace",
+  seo_description: "Sri Lanka's premier online marketplace — shop electronics, fashion, home goods and more. Verified sellers, fast delivery island-wide.",
+  seo_og_image: "",
+  footer_copyright: "© {year} ARTIXO — Made with ❤️ in Sri Lanka",
+  footer_email: "support@artixo.lk",
+  footer_phone: "+94 11 000 0000",
+  footer_address: "Colombo, Sri Lanka 🇱🇰",
+  maintenance_mode: "false",
+  maintenance_title: "We'll be back soon!",
+  maintenance_message: "We're performing scheduled maintenance. Thank you for your patience.",
+  maintenance_eta: "",
+  currency_symbol: "Rs.",
+  vat_percentage: "0",
+  tax_inclusive: "true",
   primary_color: "#FFD100",
   secondary_color: "#8D153A",
   accent_color: "#0D9488",

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   Palette, Megaphone, LayoutGrid, Share2, Info, Truck,
   Save, AlertTriangle, CheckCircle2, Copy,
-  ImageIcon, Upload, X, Monitor,
+  ImageIcon, Upload, X, Monitor, Search, FootprintsIcon, Wrench, DollarSign,
 } from "lucide-react";
 
 const SETUP_SQL = `CREATE TABLE IF NOT EXISTS site_settings (
@@ -104,7 +104,7 @@ export const AdminCustomizeSection = () => {
     }
   }, [dbReady, settings, draftInitialized]);
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "banner" | "sections" | "social" | "delivery">("identity");
+  const [tab, setTab] = useState<"identity" | "colors" | "announcement" | "banner" | "sections" | "social" | "delivery" | "seo" | "footer" | "maintenance" | "currency">("identity");
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const update = <K extends keyof SiteSettings>(key: K, val: string) =>
@@ -153,6 +153,10 @@ export const AdminCustomizeSection = () => {
     { key: "sections",     label: "Sections",        icon: LayoutGrid },
     { key: "social",       label: "Social",          icon: Share2 },
     { key: "delivery",     label: "Delivery",        icon: Truck },
+    { key: "seo",          label: "SEO",             icon: Search },
+    { key: "footer",       label: "Footer",          icon: FootprintsIcon },
+    { key: "maintenance",  label: "Maintenance",     icon: Wrench },
+    { key: "currency",     label: "Currency & Tax",  icon: DollarSign },
   ] as const;
 
   return (
@@ -507,6 +511,149 @@ export const AdminCustomizeSection = () => {
               <Field label="Standard Delivery Fee (Rs.)" value={draft.delivery_fee} onChange={(v) => update("delivery_fee", v)} placeholder="350" type="number" />
               <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
                 <p className="text-xs text-gray-600">Orders above <span className="text-gray-900 font-semibold">Rs. {draft.free_delivery_min}</span> get free delivery. Others pay <span className="text-gray-900 font-semibold">Rs. {draft.delivery_fee}</span>.</p>
+              </div>
+            </>
+          )}
+
+          {/* ── SEO ── */}
+          {tab === "seo" && (
+            <>
+              <SectionTitle title="SEO Settings" desc="Controls how your site appears in Google and social media previews" />
+              <Field label="Default Page Title" value={draft.seo_title} onChange={(v) => update("seo_title", v)} placeholder="ARTIXO — Sri Lanka's Online Marketplace" />
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Meta Description</label>
+                <textarea
+                  value={draft.seo_description}
+                  onChange={(e) => update("seo_description", e.target.value)}
+                  placeholder="Sri Lanka's premier online marketplace..."
+                  rows={3}
+                  maxLength={160}
+                  className="w-full rounded-xl bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none"
+                />
+                <p className="text-[10px] text-gray-400 text-right">{draft.seo_description.length}/160 characters</p>
+              </div>
+              <Field label="OG Image URL (social media preview)" value={draft.seo_og_image} onChange={(v) => update("seo_og_image", v)} placeholder="https://artixo.lk/og-image.jpg" />
+              {draft.seo_og_image && (
+                <div className="rounded-xl overflow-hidden border border-gray-200 mt-2">
+                  <img src={draft.seo_og_image} alt="OG Preview" className="w-full h-32 object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                </div>
+              )}
+              <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-200">
+                <p className="text-xs font-semibold text-blue-800 mb-1">Google Preview</p>
+                <p className="text-sm font-medium text-blue-900">{draft.seo_title || "ARTIXO — Sri Lanka's Online Marketplace"}</p>
+                <p className="text-xs text-green-700">https://artixo.lk</p>
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{draft.seo_description || "Sri Lanka's premier online marketplace..."}</p>
+              </div>
+            </>
+          )}
+
+          {/* ── Footer ── */}
+          {tab === "footer" && (
+            <>
+              <SectionTitle title="Footer Settings" desc="Contact info and copyright text shown in the site footer" />
+              <Field label="Copyright Text" value={draft.footer_copyright} onChange={(v) => update("footer_copyright", v)} placeholder="© {year} ARTIXO — Made with ❤️ in Sri Lanka" />
+              <p className="text-[10px] text-gray-400 -mt-3 mb-4">Use <code className="bg-gray-100 px-1 rounded">{"{year}"}</code> to auto-insert the current year.</p>
+              <Field label="Support Email" value={draft.footer_email} onChange={(v) => update("footer_email", v)} placeholder="support@artixo.lk" type="email" />
+              <Field label="Support Phone" value={draft.footer_phone} onChange={(v) => update("footer_phone", v)} placeholder="+94 11 000 0000" />
+              <Field label="Address" value={draft.footer_address} onChange={(v) => update("footer_address", v)} placeholder="Colombo, Sri Lanka 🇱🇰" />
+              <div className="mt-4 p-4 rounded-xl bg-gray-900 border border-gray-700 text-white">
+                <p className="text-[10px] text-gray-400 mb-2">Footer Preview</p>
+                <p className="text-xs text-gray-300">📍 {draft.footer_address || "Colombo, Sri Lanka 🇱🇰"}</p>
+                <p className="text-xs text-gray-300 mt-1">✉️ {draft.footer_email || "support@artixo.lk"}</p>
+                <p className="text-xs text-gray-300 mt-1">📞 {draft.footer_phone || "+94 11 000 0000"}</p>
+                <div className="mt-3 pt-3 border-t border-gray-700">
+                  <p className="text-[10px] text-gray-500">{(draft.footer_copyright || "© {year} ARTIXO").replace("{year}", new Date().getFullYear().toString())}</p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Maintenance ── */}
+          {tab === "maintenance" && (
+            <>
+              <SectionTitle title="Maintenance Mode" desc="When enabled, visitors see a maintenance page. Admins can still access the site." />
+              <div className={`rounded-2xl p-4 mb-4 border ${draft.maintenance_mode === "true" ? "bg-red-50 border-red-200" : "bg-green-50 border-green-200"}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm font-bold ${draft.maintenance_mode === "true" ? "text-red-700" : "text-green-700"}`}>
+                      {draft.maintenance_mode === "true" ? "🔴 Site is OFFLINE (maintenance mode ON)" : "🟢 Site is ONLINE (maintenance mode OFF)"}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${draft.maintenance_mode === "true" ? "text-red-600" : "text-green-600"}`}>
+                      {draft.maintenance_mode === "true" ? "Visitors see maintenance page. Admins can still browse." : "Site is live and accessible to everyone."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => update("maintenance_mode", draft.maintenance_mode === "true" ? "false" : "true")}
+                    className={`relative w-14 h-7 rounded-full transition-colors ${draft.maintenance_mode === "true" ? "bg-red-500" : "bg-green-500"}`}
+                  >
+                    <span className={`absolute top-1 left-1 h-5 w-5 rounded-full bg-white shadow transition-transform ${draft.maintenance_mode === "true" ? "translate-x-7" : ""}`} />
+                  </button>
+                </div>
+              </div>
+              <Field label="Maintenance Page Title" value={draft.maintenance_title} onChange={(v) => update("maintenance_title", v)} placeholder="We'll be back soon!" />
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Maintenance Message</label>
+                <textarea
+                  value={draft.maintenance_message}
+                  onChange={(e) => update("maintenance_message", e.target.value)}
+                  placeholder="We're performing scheduled maintenance. Thank you for your patience."
+                  rows={3}
+                  className="w-full rounded-xl bg-gray-50 border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 transition-all resize-none"
+                />
+              </div>
+              <Field label="Expected Back Time (optional)" value={draft.maintenance_eta} onChange={(v) => update("maintenance_eta", v)} placeholder="e.g. 2:00 PM today" />
+              <div className="mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                <p className="text-xs text-amber-700">⚠️ Save changes first, then toggle maintenance mode. Admins bypass the maintenance page automatically.</p>
+              </div>
+            </>
+          )}
+
+          {/* ── Currency & Tax ── */}
+          {tab === "currency" && (
+            <>
+              <SectionTitle title="Currency & Tax" desc="Controls how prices are displayed across the site" />
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Currency Symbol</p>
+              <div className="grid grid-cols-4 gap-2 mb-4">
+                {["Rs.", "LKR", "$", "€"].map((sym) => (
+                  <button key={sym} onClick={() => update("currency_symbol", sym)}
+                    className="py-2.5 rounded-2xl text-sm font-bold transition-all"
+                    style={draft.currency_symbol === sym
+                      ? { background: "rgba(141,21,58,0.85)", color: "#fff", border: "1px solid rgba(141,21,58,0.3)" }
+                      : { background: "#f3f4f6", color: "#374151", border: "1px solid #e5e7eb" }}>
+                    {sym}
+                  </button>
+                ))}
+              </div>
+              <Field label="Custom Currency Symbol" value={draft.currency_symbol} onChange={(v) => update("currency_symbol", v)} placeholder="Rs." />
+
+              <div className="border-t border-gray-100 pt-4 mt-2">
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">VAT / Tax Percentage</p>
+                  <span className="text-sm font-bold text-gray-800">{draft.vat_percentage}%</span>
+                </div>
+                <input type="range" min="0" max="30" step="1"
+                  value={draft.vat_percentage}
+                  onChange={(e) => update("vat_percentage", e.target.value)}
+                  className="w-full accent-[#8D153A]" />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-4">
+                  <span>0% (No tax)</span><span>30%</span>
+                </div>
+                <Field label="Custom VAT %" value={draft.vat_percentage} onChange={(v) => update("vat_percentage", v)} placeholder="0" type="number" />
+                <Toggle label="Tax Inclusive Pricing" value={draft.tax_inclusive === "true"}
+                  onChange={(v) => update("tax_inclusive", v ? "true" : "false")}
+                  description="If ON, displayed prices already include tax. If OFF, tax is added at checkout." />
+              </div>
+
+              <div className="mt-4 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                <p className="text-xs text-gray-500 mb-2 font-semibold">Price Display Preview</p>
+                <p className="text-lg font-bold text-gray-900">{draft.currency_symbol} 2,500</p>
+                {Number(draft.vat_percentage) > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {draft.tax_inclusive === "true"
+                      ? `Includes ${draft.vat_percentage}% VAT`
+                      : `+ ${draft.vat_percentage}% VAT = ${draft.currency_symbol} ${Math.round(2500 * (1 + Number(draft.vat_percentage) / 100)).toLocaleString()}`}
+                  </p>
+                )}
               </div>
             </>
           )}

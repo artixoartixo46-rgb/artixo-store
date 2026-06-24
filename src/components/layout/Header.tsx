@@ -28,9 +28,9 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
       {/* Main header row */}
-      <div className="container flex h-14 md:h-16 items-center gap-2 md:gap-4">
+      <div className="container flex h-13 md:h-16 items-center gap-1 md:gap-4">
         <Link to="/" className="flex items-center shrink-0">
-          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-10 md:h-14 w-auto max-w-[100px] md:max-w-[140px] object-contain" />
+          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-9 md:h-14 w-auto max-w-[80px] md:max-w-[140px] object-contain" />
         </Link>
 
         {/* Desktop search — hidden on small screens */}
@@ -51,7 +51,7 @@ export const Header = () => {
           </Button>
 
           {user && <NotificationBell />}
-          {user && <PushNotificationBell />}
+          {user && <span className="hidden sm:inline-flex"><PushNotificationBell /></span>}
           {!isAdmin && (
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">

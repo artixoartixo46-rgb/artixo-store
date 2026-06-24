@@ -95,27 +95,27 @@ export const HeroBanner = () => {
         />
 
         {showText && (
-          <div className="relative container h-full flex items-center">
+          <div className="relative container h-full flex items-center px-14 sm:px-8">
             <div
-              className="max-w-2xl space-y-6 animate-fade-in"
+              className="w-full max-w-2xl space-y-3 sm:space-y-6 animate-fade-in"
               key={`c-${b.id}`}
               style={{ color: textColor, ...textAlign }}
             >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-sm font-semibold" style={{ color: textColor }}>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 text-xs sm:text-sm font-semibold" style={{ color: textColor }}>
                 🇱🇰 Sri Lanka's #1 Marketplace
               </div>
-              <h1 className="font-display text-2xl sm:text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg">
+              <h1 className="font-display text-xl sm:text-4xl md:text-6xl font-extrabold leading-tight drop-shadow-lg break-words">
                 {b.title ?? "Shop everything island-wide"}
               </h1>
               {b.subtitle && (
                 <p className="text-sm sm:text-lg opacity-90 max-w-md drop-shadow hidden sm:block">{b.subtitle}</p>
               )}
-              <div className="flex flex-wrap gap-3" style={{ justifyContent: textPosition === "center" ? "center" : textPosition === "right" ? "flex-end" : "flex-start" }}>
+              <div className="flex flex-wrap gap-2 sm:gap-3" style={{ justifyContent: textPosition === "center" ? "center" : textPosition === "right" ? "flex-end" : "flex-start" }}>
                 <Link to={b.linkUrl ?? "/products"}>
-                  <Button variant="hero" size="lg">{b.ctaText ?? "Shop Now"}</Button>
+                  <Button variant="hero" size="sm" className="sm:text-base sm:h-11 sm:px-6">{b.ctaText ?? "Shop Now"}</Button>
                 </Link>
                 <Link to="/become-seller">
-                  <Button variant="outline" size="lg" className="bg-white/10 border-white/50 text-white hover:bg-white/20">
+                  <Button variant="outline" size="sm" className="sm:text-base sm:h-11 sm:px-6 bg-white/10 border-white/50 text-white hover:bg-white/20">
                     Sell with Us
                   </Button>
                 </Link>

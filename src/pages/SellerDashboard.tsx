@@ -22,6 +22,7 @@ import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeli
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
+import { SellerWallet } from "@/components/seller/SellerWallet";
 
 interface Category { id: string; name: string; }
 interface Product {
@@ -331,14 +332,67 @@ const SellerDashboard = () => {
       const myTotal = orders.find((o) => o.id === orderId)?.my_items
         ?.reduce((s: number, it: any) => s + Number(it.unitPrice) * it.quantity, 0) ?? 0;
       if (myTotal > 0) {
-        const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate").eq("id", user!.id).maybeSingle();
+        const { data: profile } = await (supabase as any).from("profiles").select("seller_balance, commission_rate, wallet_tier").eq("id", user!.id).maybeSingle();
         const rate = Number(profile?.commission_rate ?? settings.default_commission_rate ?? 5);
-        const commission = myTotal * (rate / 100);
-        const net = myTotal - commission;
+        const commission = parseFloat((myTotal * (rate / 100)).toFixed(2));
+        const net = parseFloat((myTotal - commission).toFixed(2));
         const newBalance = Number(profile?.seller_balance ?? 0) + net;
         await (supabase as any).from("profiles").upsert({ id: user!.id, seller_balance: newBalance }, { onConflict: "id" });
         setSellerBalance(newBalance);
-        toast.success(`+${formatLKR(net)} credited to your wallet (${rate}% commission deducted)`);
+        toast.success(`+${formatLKR(net)} credited to your earnings (${rate}% commission: ${formatLKR(commission)})`);
+
+        // ── Deduct commission from seller_wallets (deposit tier) ──────────────
+        const walletTier = profile?.wallet_tier ?? "deposit";
+        if (walletTier === "deposit") {
+          const { data: wallet } = await (supabase as any)
+            .from("seller_wallets")
+            .select("balance, total_commission")
+            .eq("seller_id", user!.id)
+            .single();
+
+          if (wallet) {
+            const newWalletBal = parseFloat((Number(wallet.balance) - commission).toFixed(2));
+            const suspend = newWalletBal <= 0;
+            await (supabase as any)
+              .from("seller_wallets")
+              .update({
+                balance: Math.max(0, newWalletBal),
+                total_commission: parseFloat((Number(wallet.total_commission) + commission).toFixed(2)),
+                is_suspended: suspend,
+              })
+              .eq("seller_id", user!.id);
+
+            // Log transaction
+            await (supabase as any).from("wallet_transactions").insert({
+              seller_id: user!.id,
+              type: "commission",
+              amount: commission,
+              balance_after: Math.max(0, newWalletBal),
+              order_id: orderId,
+              description: `${rate}% commission on order #${orderId.slice(-6).toUpperCase()}`,
+            });
+
+            if (suspend) {
+              toast.error("⚠️ Commission wallet empty — products suspended. Please top up.", { duration: 6000 });
+            } else if (newWalletBal < 400) {
+              toast.warning(`Commission wallet low: Rs. ${Math.max(0, newWalletBal).toFixed(2)}. Top up soon.`, { duration: 5000 });
+            }
+          }
+        } else {
+          // Invoice tier — just log the owed commission
+          await (supabase as any).from("wallet_transactions").insert({
+            seller_id: user!.id,
+            type: "commission",
+            amount: commission,
+            balance_after: null,
+            order_id: orderId,
+            description: `Invoice: ${rate}% commission on order #${orderId.slice(-6).toUpperCase()}`,
+          });
+          await (supabase as any)
+            .from("seller_wallets")
+            .update({ total_commission: (supabase as any).raw(`total_commission + ${commission}`) })
+            .eq("seller_id", user!.id);
+        }
       }
     }
 
@@ -562,6 +616,9 @@ const SellerDashboard = () => {
           </TabsTrigger>
           <TabsTrigger value="earnings">
             <Wallet className="h-4 w-4 mr-1" /> Earnings
+          </TabsTrigger>
+          <TabsTrigger value="commission">
+            <Banknote className="h-4 w-4 mr-1" /> Commission Wallet
           </TabsTrigger>
         </TabsList>
 
@@ -1080,6 +1137,19 @@ const SellerDashboard = () => {
                 </div>
               </Card>
             )}
+          </div>
+        </TabsContent>
+
+        {/* ── COMMISSION WALLET TAB ──────────────────────────────────────────── */}
+        <TabsContent value="commission">
+          <div className="max-w-lg">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Commission Wallet</h2>
+              <p className="text-sm text-muted-foreground">
+                This wallet is used to collect your platform commission (5%). It's separate from your earnings.
+              </p>
+            </div>
+            <SellerWallet />
           </div>
         </TabsContent>
       </Tabs>

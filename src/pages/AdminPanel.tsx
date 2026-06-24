@@ -91,7 +91,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals" | "wallets";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -106,6 +106,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "errors", label: "Error Monitor", icon: Bug },
   { key: "affiliates", label: "Affiliates", icon: Gift },
   { key: "withdrawals", label: "Withdrawals", icon: Banknote },
+  { key: "wallets", label: "Seller Wallets", icon: DollarSign },
 ];
 
 // ── Stat card used on the dashboard overview ─────────────────────────────────
@@ -1116,10 +1117,228 @@ const AdminPanel = () => {
               </div>
             )}
 
+            {/* ── SELLER WALLETS SECTION ─────────────────────────────────────── */}
+            {section === "wallets" && <AdminSellerWallets />}
+
           </main>
         </div>
       </div>
     </SidebarProvider>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Admin Seller Wallets Panel
+───────────────────────────────────────────────────────────────────────────── */
+const AdminSellerWallets = () => {
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [txns, setTxns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [topUpNote, setTopUpNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("seller_wallets")
+      .select("*, profiles(full_name, email, wallet_tier)")
+      .order("balance", { ascending: true });
+    setWallets(data ?? []);
+    setLoading(false);
+  };
+
+  const loadTxns = async (sellerId: string) => {
+    const { data } = await (supabase as any)
+      .from("wallet_transactions")
+      .select("*")
+      .eq("seller_id", sellerId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setTxns(data ?? []);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleTopUp = async () => {
+    if (!selectedSeller) return;
+    const amount = parseFloat(topUpAmount);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    setSaving(true);
+    try {
+      const newBal = parseFloat((Number(selectedSeller.balance) + amount).toFixed(2));
+      const newDeposited = parseFloat((Number(selectedSeller.total_deposited) + amount).toFixed(2));
+      const { error } = await (supabase as any)
+        .from("seller_wallets")
+        .update({ balance: newBal, total_deposited: newDeposited, is_suspended: false })
+        .eq("seller_id", selectedSeller.seller_id);
+      if (error) throw error;
+
+      await (supabase as any).from("wallet_transactions").insert({
+        seller_id: selectedSeller.seller_id,
+        type: "deposit",
+        amount,
+        balance_after: newBal,
+        description: topUpNote || "Admin top-up",
+      });
+
+      toast.success(`Rs. ${amount} credited to ${selectedSeller.profiles?.full_name || "seller"}`);
+      setTopUpAmount("");
+      setTopUpNote("");
+      setSelectedSeller({ ...selectedSeller, balance: newBal, total_deposited: newDeposited, is_suspended: false });
+      loadTxns(selectedSeller.seller_id);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const upgradeTier = async (sellerId: string, newTier: "deposit" | "invoice") => {
+    await (supabase as any).from("seller_wallets").update({ tier: newTier, tier_upgraded_at: new Date().toISOString() }).eq("seller_id", sellerId);
+    await (supabase as any).from("profiles").update({ wallet_tier: newTier }).eq("id", sellerId);
+    toast.success(`Seller upgraded to ${newTier} tier`);
+    load();
+  };
+
+  const toggleSuspend = async (w: any) => {
+    await (supabase as any).from("seller_wallets").update({ is_suspended: !w.is_suspended }).eq("seller_id", w.seller_id);
+    toast.success(w.is_suspended ? "Seller unsuspended" : "Seller suspended");
+    load();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-2xl">Seller Wallets</h2>
+        <Button size="sm" variant="outline" onClick={load}><RefreshCw className="h-4 w-4 mr-1" /> Refresh</Button>
+      </div>
+
+      {loading ? (
+        <Card className="p-12 text-center text-muted-foreground">Loading…</Card>
+      ) : wallets.length === 0 ? (
+        <Card className="p-12 text-center text-muted-foreground">No seller wallets found. Run the migration SQL first.</Card>
+      ) : (
+        <div className="grid lg:grid-cols-3 gap-4">
+          {/* Wallet list */}
+          <div className="lg:col-span-2 space-y-3">
+            {wallets.map((w) => (
+              <Card
+                key={w.seller_id}
+                className={`p-4 cursor-pointer border-2 transition-all ${selectedSeller?.seller_id === w.seller_id ? "border-primary" : "border-transparent hover:border-muted-foreground/30"} ${w.is_suspended ? "bg-red-50" : w.balance < 400 ? "bg-amber-50" : ""}`}
+                onClick={() => { setSelectedSeller(w); loadTxns(w.seller_id); }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">{w.profiles?.full_name || "Seller"}</p>
+                    <p className="text-xs text-muted-foreground">{w.profiles?.email}</p>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <p className={`font-bold text-lg ${w.is_suspended ? "text-red-600" : w.balance < 400 ? "text-amber-600" : "text-green-700"}`}>
+                      Rs. {Number(w.balance).toFixed(2)}
+                    </p>
+                    <div className="flex gap-1 justify-end">
+                      <Badge variant="secondary" className={w.tier === "invoice" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"} style={{fontSize:"10px"}}>
+                        {w.tier}
+                      </Badge>
+                      {w.is_suspended && <Badge className="bg-red-100 text-red-700" style={{fontSize:"10px"}}>SUSPENDED</Badge>}
+                      {!w.is_suspended && w.balance < 400 && <Badge className="bg-amber-100 text-amber-700" style={{fontSize:"10px"}}>LOW</Badge>}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <span>Deposited: Rs. {Number(w.total_deposited).toFixed(2)}</span>
+                  <span>Commission: Rs. {Number(w.total_commission).toFixed(2)}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Detail panel */}
+          <div className="space-y-3">
+            {selectedSeller ? (
+              <>
+                <Card className="p-4 space-y-3">
+                  <h3 className="font-semibold text-sm">{selectedSeller.profiles?.full_name}</h3>
+
+                  {/* Top up */}
+                  <div>
+                    <Label className="text-xs">Top Up Amount (Rs.)</Label>
+                    <Input
+                      type="number" min="100" placeholder="e.g. 2500"
+                      value={topUpAmount}
+                      onChange={(e) => setTopUpAmount(e.target.value)}
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Note (optional)</Label>
+                    <Input
+                      placeholder="e.g. Bank transfer received"
+                      value={topUpNote}
+                      onChange={(e) => setTopUpNote(e.target.value)}
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                  <Button size="sm" className="w-full" onClick={handleTopUp} disabled={saving}>
+                    {saving ? "Crediting…" : "✚ Credit Wallet"}
+                  </Button>
+
+                  {/* Tier toggle */}
+                  <div className="border-t pt-3 space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Tier Management</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant={selectedSeller.tier === "deposit" ? "default" : "outline"}
+                        className="flex-1 text-xs h-7"
+                        onClick={() => upgradeTier(selectedSeller.seller_id, "deposit")}>
+                        Deposit
+                      </Button>
+                      <Button size="sm" variant={selectedSeller.tier === "invoice" ? "default" : "outline"}
+                        className="flex-1 text-xs h-7"
+                        onClick={() => upgradeTier(selectedSeller.seller_id, "invoice")}>
+                        Invoice
+                      </Button>
+                    </div>
+                    <Button size="sm" variant="outline"
+                      className={`w-full text-xs h-7 ${selectedSeller.is_suspended ? "border-green-300 text-green-700" : "border-red-300 text-red-600"}`}
+                      onClick={() => toggleSuspend(selectedSeller)}>
+                      {selectedSeller.is_suspended ? "✓ Unsuspend" : "⊘ Suspend"}
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Transaction log */}
+                {txns.length > 0 && (
+                  <Card className="p-4">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Recent Transactions</p>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {txns.map((t) => (
+                        <div key={t.id} className="flex justify-between text-xs py-1 border-b last:border-0">
+                          <div>
+                            <span className={`font-medium capitalize ${t.type === "commission" ? "text-red-600" : "text-green-700"}`}>{t.type}</span>
+                            <p className="text-muted-foreground text-[11px]">{t.description}</p>
+                            <p className="text-muted-foreground/60 text-[11px]">{new Date(t.created_at).toLocaleDateString("en-LK")}</p>
+                          </div>
+                          <span className={`font-bold ${t.type === "commission" ? "text-red-600" : "text-green-700"}`}>
+                            {t.type === "commission" ? "-" : "+"}Rs. {Math.abs(t.amount).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Card className="p-8 text-center text-sm text-muted-foreground">
+                Select a seller to manage their wallet
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

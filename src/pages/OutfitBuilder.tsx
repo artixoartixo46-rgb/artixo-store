@@ -10,7 +10,8 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  images: string[];
+  images?: string[] | null;
+  image_url?: string | null;
   category_id: string;
   description?: string;
 }
@@ -103,17 +104,29 @@ const OutfitBuilder = () => {
     { label: "Accessory", emoji: "💍", categoryHints: ["accessory", "jewel", "bag", "fashion", "beauty"], product: null },
   ]);
 
-  // Load fashion-adjacent products
+  // Load products — try status filter, fall back to all active
   useEffect(() => {
-    supabase
-      .from("products")
-      .select("id, name, price, images, category_id, description")
-      .eq("status", "approved")
-      .limit(60)
-      .then(({ data }) => {
-        if (data) setProducts(data as Product[]);
-        setLoading(false);
-      });
+    const load = async () => {
+      // Try with status column (new schema)
+      let { data, error } = await supabase
+        .from("products")
+        .select("id, name, price, images, image_url, category_id, description")
+        .eq("status", "approved")
+        .limit(60);
+
+      // If status column doesn't exist, fetch without filter
+      if (error || !data?.length) {
+        const fallback = await supabase
+          .from("products")
+          .select("id, name, price, images, image_url, category_id, description")
+          .limit(60);
+        data = fallback.data;
+      }
+
+      setProducts((data ?? []) as Product[]);
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const pickProduct = (product: Product) => {
@@ -188,7 +201,7 @@ const OutfitBuilder = () => {
               >
                 <div className="aspect-square bg-muted overflow-hidden">
                   <img
-                    src={p.images?.[0] ?? "/placeholder.svg"}
+                    src={p.images?.[0] ?? p.image_url ?? "/placeholder.svg"}
                     alt={p.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -243,7 +256,7 @@ const OutfitBuilder = () => {
                 >
                   <div className="aspect-square bg-muted overflow-hidden relative">
                     <img
-                      src={slot.product.images?.[0] ?? "/placeholder.svg"}
+                      src={slot.product.images?.[0] ?? slot.product.image_url ?? "/placeholder.svg"}
                       alt={slot.product.name}
                       className="w-full h-full object-cover"
                     />

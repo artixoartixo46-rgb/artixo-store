@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { SplashScreen } from "@/components/SplashScreen";
 import { useReferralCapture } from "@/hooks/useReferral";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -84,7 +85,23 @@ const SentryFallback = () => (
   </div>
 );
 
-const App = () => (
+// Show splash only once per browser session
+const SPLASH_KEY = "artixo_splash_seen";
+
+const App = () => {
+  // If already seen this session, skip immediately
+  const [showSplash, setShowSplash] = useState(
+    () => !sessionStorage.getItem(SPLASH_KEY)
+  );
+
+  const handleSplashDone = () => {
+    sessionStorage.setItem(SPLASH_KEY, "1");
+    setShowSplash(false);
+  };
+
+  return (
+  <>
+    {showSplash && <SplashScreen onDone={handleSplashDone} />}
   <Sentry.ErrorBoundary fallback={<SentryFallback />} showDialog={false}>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -127,6 +144,8 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
   </Sentry.ErrorBoundary>
-);
+  </>
+  );
+};
 
 export default App;

@@ -112,12 +112,15 @@ export const HeroBanner = () => {
         </>
       )}
 
-      {/* CTA button for uploaded banners (bottom-left, subtle) */}
-      {!b.isDefault && b.linkUrl && (
-        <div style={{ position: "absolute", bottom: "24px", left: "0", right: "0", display: "flex", justifyContent: "center" }}>
-          <Link to={b.linkUrl}>
-            <Button variant="hero" size="lg">
-              {b.ctaText ?? "Shop Now"}
+      {/* CTA buttons for uploaded banners */}
+      {!b.isDefault && (
+        <div style={{ position: "absolute", bottom: "24px", left: "0", right: "0", display: "flex", justifyContent: "center", gap: "12px" }}>
+          <Link to={b.linkUrl ?? "/products"}>
+            <Button variant="hero" size="lg">{b.ctaText ?? "Shop Now"}</Button>
+          </Link>
+          <Link to="/become-seller">
+            <Button variant="outline" size="lg" className="bg-background/10 border-background/30 text-secondary-foreground hover:bg-background/20">
+              Sell with Us
             </Button>
           </Link>
         </div>

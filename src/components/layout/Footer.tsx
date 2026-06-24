@@ -126,7 +126,9 @@ export const Footer = () => (
           className="flex items-center gap-2 hover:text-white transition-colors"
         >
           <span>Designed & Developed by</span>
-          <img src={artixoLogo} alt="Artixo" className="h-5 w-auto brightness-[5]" />
+          <span className="inline-flex items-center bg-white rounded-md px-1 py-0.5">
+            <img src={artixoLogo} alt="Artixo" className="h-5 w-auto" />
+          </span>
           <span className="font-semibold text-yellow-300">ARTIXO</span>
         </a>
       </div>

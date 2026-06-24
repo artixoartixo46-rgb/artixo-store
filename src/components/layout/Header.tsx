@@ -26,11 +26,8 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-white/30 shadow-glass">
       <div className="container flex h-16 items-center gap-4">
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
-          <span className="font-display font-bold text-xl hidden sm:inline">
-            ARTI<span className="text-primary">XO</span>
-          </span>
+        <Link to="/" className="flex items-center shrink-0">
+          <img src={logoSrc} alt={settings.site_name || "Artixo"} className="h-14 md:h-16 w-auto max-w-[140px] object-contain" />
         </Link>
 
         <AiSearchBar />

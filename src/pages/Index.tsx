@@ -158,7 +158,7 @@ const Index = () => {
       <section className="container py-12">
         <Card className="gradient-saffron text-primary-foreground p-8 md:p-12 text-center border-0 shadow-glow">
           {/* Promo banners */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
 
           {/* Rental Marketplace promo */}
           <Link to="/rentals">
@@ -191,6 +191,24 @@ const Index = () => {
                 Try Now →
               </div>
               <div className="absolute -right-4 -top-4 w-20 h-20 rounded-full bg-white/10" />
+            </div>
+          </Link>
+
+
+          {/* Reels promo */}
+          <Link to="/reels" className="block">
+            <div className="rounded-2xl p-4 flex items-center gap-3 text-white relative overflow-hidden"
+              style={{ background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)" }}>
+              <span className="text-4xl">🎬</span>
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">New ✨</p>
+                <h3 className="font-display text-base font-extrabold leading-tight">Product Reels</h3>
+                <p className="text-white/70 text-xs mt-0.5">Scroll, discover &amp; buy in seconds</p>
+              </div>
+              <div className="shrink-0 bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-bold">
+                Watch →
+              </div>
+              <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
             </div>
           </Link>
 

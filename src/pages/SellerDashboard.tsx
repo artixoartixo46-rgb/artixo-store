@@ -18,6 +18,7 @@ import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarCha
 import { sendPushToUser } from "@/hooks/usePushNotifications";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
+import { ReelsTab } from "@/components/ReelsTab";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
@@ -1165,6 +1166,10 @@ const SellerDashboard = () => {
             </div>
             <SellerWallet />
           </div>
+        </TabsContent>
+
+        <TabsContent value="reels">
+          <ReelsTab sellerId={user.id} products={products} />
         </TabsContent>
       </Tabs>
 

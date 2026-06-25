@@ -14,8 +14,8 @@ interface TurnstileWidgetProps {
   onToken: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
-  /** "normal" shows a checkbox widget; "invisible" runs silently */
-  appearance?: "normal" | "invisible";
+  /** "always" shows checkbox widget; "execute" runs on submit; "interaction-only" shows only if bot suspected */
+  appearance?: "always" | "execute" | "interaction-only";
   resetKey?: string | number; // change this to reset the widget
 }
 
@@ -34,7 +34,7 @@ export const TurnstileWidget = ({
   onToken,
   onExpire,
   onError,
-  appearance = "normal",
+  appearance = "always",
   resetKey,
 }: TurnstileWidgetProps) => {
   const containerRef = useRef<HTMLDivElement>(null);

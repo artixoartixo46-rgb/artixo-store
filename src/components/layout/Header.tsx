@@ -43,7 +43,7 @@ export const Header = () => {
             <img
               src={logoSrc}
               alt={settings.site_name || "Artixo"}
-              className="h-9 w-auto max-w-[72px] object-contain"
+              className="h-12 w-auto max-w-[96px] object-contain"
             />
           </Link>
 

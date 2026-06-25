@@ -47,9 +47,11 @@ export const Header = () => {
             />
           </Link>
 
-          {/* Desktop search bar — fills the middle */}
-          <div className="hidden sm:flex flex-1 mx-2">
-            <AiSearchBar />
+          {/* Desktop search bar — centered, fixed width */}
+          <div className="hidden sm:flex flex-1 justify-center px-4">
+            <div style={{ width: "100%", maxWidth: "440px" }}>
+              <AiSearchBar />
+            </div>
           </div>
 
           {/* Mobile: push icons to right */}

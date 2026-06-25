@@ -26,14 +26,15 @@ const DEFAULT_BANNER: Banner = {
 };
 
 export const HeroBanner = () => {
-  const [banners, setBanners] = useState<Banner[]>([]);
+  // Start with DEFAULT_BANNER so the section renders immediately (no blank flash on load)
+  const [banners, setBanners] = useState<Banner[]>([DEFAULT_BANNER]);
   const [idx, setIdx] = useState(0);
   const { settings } = useSiteSettings();
-  const bannerH = settings.banner_height || "600";
-  // On mobile, cap the banner at 55vw minimum height so it doesn't feel too tall or too short
+  const bannerH = settings.banner_height || "520";
+  // Desktop: fixed height from settings. Mobile: min 220px, scales with vw up to bannerH
   const bannerStyle = bannerH === "100vh"
     ? { height: "100svh" }
-    : { height: `clamp(260px, 45vw, ${bannerH}px)` };
+    : { height: `clamp(220px, 38vw, ${bannerH}px)` };
   const objectFit = (settings.banner_object_fit || "cover") as React.CSSProperties["objectFit"];
   const objectPosition = settings.banner_object_position || "center";
   const overlayOpacity = Number(settings.banner_overlay_opacity ?? 50) / 100;
@@ -76,7 +77,6 @@ export const HeroBanner = () => {
     return () => clearInterval(t);
   }, [banners.length]);
 
-  if (banners.length === 0) return null;
   const b = banners[idx];
 
   return (
@@ -150,9 +150,4 @@ export const HeroBanner = () => {
                 />
               ))}
             </div>
-          </>
-        )}
-      </div>
-    </section>
-  );
-};
+  

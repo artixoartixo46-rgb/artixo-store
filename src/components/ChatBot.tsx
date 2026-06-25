@@ -1,144 +1,138 @@
-import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, ShoppingBag } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { MessageCircle, X, Send, Bot, RotateCcw, ShoppingBag, Package, RefreshCw, HelpCircle, Tag } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
+// ── Types ──────────────────────────────────────────────────────────────
 interface Message {
   id: number;
   from: "bot" | "user";
   text: string;
-  link?: { label: string; to: string };
+  links?: { label: string; to: string }[];
   time: string;
 }
 
 const now = () =>
   new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-/* ── Smart response engine ── */
-const getReply = (
-  input: string
-): { text: string; link?: { label: string; to: string } } => {
-  const q = input.toLowerCase().trim();
-
-  // Greetings
-  if (/^(hi|hello|hey|vanakkam|ayubowan|hola|yo|sup)\b/.test(q))
-    return {
-      text: "Hey there! 👋 Welcome to ARTIXO — Sri Lanka's #1 marketplace. How can I help you today?\n\nYou can ask me about:\n• 📦 Your orders\n• 🚚 Delivery\n• 💰 Payments\n• 🔄 Returns\n• 🛍️ Products & sellers",
-    };
-
-  // Orders / tracking
-  if (/order|track|where.*package|my order|order status/.test(q))
-    return {
-      text: "To track your order:\n1. Go to **My Orders** page\n2. Click on the order to see real-time status\n\nStatus updates: Pending → Confirmed → Processing → Shipped → Delivered\n\nYou'll also receive email updates at each stage! 📧",
-      link: { label: "View My Orders", to: "/orders" },
-    };
-
-  // Delivery / shipping
-  if (/deliver|shipping|ship|how long|when.*arrive|dispatch/.test(q))
-    return {
-      text: "🚚 **Delivery Info:**\n• All 25 districts in Sri Lanka covered\n• Standard delivery: 2–5 working days\n• Cash on Delivery available island-wide\n• Free delivery on select orders\n\nFor urgent deliveries, contact the seller directly from your order page.",
-    };
-
-  // Payment
-  if (/pay|payment|cash|bank|transfer|card|how to pay/.test(q))
-    return {
-      text: "💳 **Payment Methods on ARTIXO:**\n• 💵 Cash on Delivery — Pay when you receive\n• 🏦 Bank Transfer — Details shared after order\n• 💳 PayHere (coming soon)\n\nAll transactions are secure. No card details stored.",
-    };
-
-  // Returns / refunds
-  if (/return|refund|cancel|wrong.*item|damaged|broken/.test(q))
-    return {
-      text: "🔄 **Returns & Refunds:**\n• 7-day easy return policy\n• Eligible for: damaged, wrong, or defective items\n• Process: Go to Orders → Select order → Request Return\n\nRefunds are processed within 3–5 business days to your original payment method.",
-      link: { label: "Refund Policy", to: "/refund-policy" },
-    };
-
-  // Seller / become seller
-  if (/sell|seller|shop|vendor|open.*shop|become.*seller/.test(q))
-    return {
-      text: "🏪 **Want to sell on ARTIXO?**\n• Completely free to start!\n• Reach thousands of Sri Lankan shoppers\n• Island-wide delivery handled\n• Easy seller dashboard\n\nJoin hundreds of sellers already on the platform!",
-      link: { label: "Become a Seller", to: "/become-seller" },
-    };
-
-  // Products / categories
-  if (/product|item|buy|shop|categor|electronics|fashion|beauty|food|grocery/.test(q))
-    return {
-      text: "🛍️ **Browse ARTIXO Products:**\n• Electronics & Gadgets\n• Fashion & Clothing\n• Beauty & Personal Care\n• Home & Kitchen\n• Sports & Outdoor\n• Groceries & Food\n\nUse the search bar to find exactly what you need!",
-      link: { label: "Browse Products", to: "/products" },
-    };
-
-  // Account / login / signup
-  if (/account|login|sign in|sign up|register|password|forgot/.test(q))
-    return {
-      text: "👤 **Account Help:**\n• Sign in with email/password or Google\n• Forgot password? Use the reset link on the login page\n• Create a new account — it's free!\n\nYour account lets you track orders, save addresses, and more.",
-      link: { label: "Sign In / Register", to: "/auth" },
-    };
-
-  // Cart
-  if (/cart|basket|checkout|buy now/.test(q))
-    return {
-      text: "🛒 **Shopping Cart Tips:**\n• Add items and review before checkout\n• You can update quantities or remove items\n• Choose your delivery address at checkout\n• Select Cash on Delivery or Bank Transfer\n\nNeed help checking out?",
-      link: { label: "Go to Cart", to: "/cart" },
-    };
-
-  // Price / discount / offer
-  if (/price|discount|offer|sale|deal|coupon|cheap|cost/.test(q))
-    return {
-      text: "💰 **Best Deals on ARTIXO:**\n• Check the **Flash Sale** section for limited-time deals\n• Trending products often have discounts\n• Subscribe to our newsletter for exclusive offers\n• All prices are in LKR (Sri Lankan Rupees) 🇱🇰",
-      link: { label: "Shop Deals", to: "/products" },
-    };
-
-  // Contact / support
-  if (/contact|support|help|complain|issue|problem|human|agent/.test(q))
-    return {
-      text: "📞 **Need More Help?**\n• Email: support@artixo.lk\n• Help Center has guides for common issues\n• For order disputes, use the Orders page\n\nOur team usually responds within 24 hours.",
-      link: { label: "Help Center", to: "/help" },
-    };
-
-  // Thanks
-  if (/thank|thanks|thank you|nandri|sthuthi/.test(q))
-    return {
-      text: "You're welcome! 😊 Happy shopping on ARTIXO! 🛍️\n\nFeel free to ask anything else anytime.",
-    };
-
-  // Goodbye
-  if (/bye|goodbye|see you|ok thanks|that.*all/.test(q))
-    return {
-      text: "Goodbye! 👋 Happy shopping and enjoy your ARTIXO experience! Come back anytime. 🇱🇰",
-    };
-
-  // Fallback
-  return {
-    text: "Hmm, I'm not sure about that one! 🤔 Try asking me about:\n\n• 📦 Order tracking\n• 🚚 Delivery times\n• 💳 Payment methods\n• 🔄 Returns & refunds\n• 🏪 Becoming a seller\n\nOr visit our Help Center for more support.",
-    link: { label: "Help Center", to: "/help" },
-  };
-};
-
-const QUICK_REPLIES = [
-  "Track my order",
-  "Delivery info",
-  "Return policy",
-  "Become a seller",
+// ── Quick actions ───────────────────────────────────────────────────────
+const QUICK = [
+  { icon: Package,     label: "Track my order",     msg: "How do I track my order?" },
+  { icon: RefreshCw,   label: "Return / Refund",     msg: "What is the return and refund policy?" },
+  { icon: ShoppingBag, label: "Browse products",     msg: "Show me popular products" },
+  { icon: Tag,         label: "Delivery info",       msg: "How long does delivery take?" },
 ];
 
+// ── Fetch helpers ───────────────────────────────────────────────────────
+async function fetchUserOrders(userId: string) {
+  const { data } = await supabase
+    .from("orders")
+    .select("id, status, total, created_at, tracking_number")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  return data ?? [];
+}
+
+async function fetchProducts(keyword: string) {
+  const { data } = await supabase
+    .from("products")
+    .select("id, name, price, image_url")
+    .ilike("name", `%${keyword}%`)
+    .limit(5);
+  return data ?? [];
+}
+
+// ── Pollinations AI ─────────────────────────────────────────────────────
+async function askAI(messages: { role: string; content: string }[]): Promise<string> {
+  try {
+    const res = await fetch("https://text.pollinations.ai/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        model: "openai",
+        seed: Math.floor(Math.random() * 9999),
+      }),
+    });
+    if (!res.ok) return "Sorry, I couldn't reach the AI right now. Please try again!";
+    return await res.text();
+  } catch {
+    return "Network error. Please check your connection and try again.";
+  }
+}
+
+// ── System prompt builder ───────────────────────────────────────────────
+function buildSystem(orders: any[], isLoggedIn: boolean): string {
+  const orderBlock = orders.length
+    ? orders
+        .map(
+          (o) =>
+            `Order #${String(o.id).slice(0, 8).toUpperCase()} — Status: ${o.status} — Total: LKR ${Number(o.total).toLocaleString()}${o.tracking_number ? ` — Tracking: ${o.tracking_number}` : ""} — Placed: ${new Date(o.created_at).toLocaleDateString()}`
+        )
+        .join("\n")
+    : isLoggedIn
+    ? "No recent orders found."
+    : "User is not logged in — cannot show order details. Ask them to sign in at /auth.";
+
+  return `You are ARTIXO Support Bot — a friendly, helpful customer support AI for ARTIXO, Sri Lanka's #1 online marketplace.
+
+STORE INFO:
+- Name: ARTIXO
+- Location: Sri Lanka — island-wide delivery to all 25 districts
+- Delivery: 1-3 business days (Colombo), 2-5 days (other districts)
+- Payment: Cash on Delivery (COD) + online payment
+- Return policy: 7-day return window for unused/defective items. Contact support within 7 days of delivery.
+- Refund policy: Refunds processed in 3-5 business days after return is received.
+- Support email: support@artixo.lk
+- Sellers: Admin-verified sellers only
+- Currency: LKR (Sri Lankan Rupee)
+
+CUSTOMER ORDERS:
+${orderBlock}
+
+RULES:
+- Be warm, concise, helpful. Use short paragraphs.
+- Answer in the same language the user writes (English or Tamil/Sinhala mix is fine).
+- For order tracking: use the order data above. If no orders, explain they need to sign in.
+- For product questions: recommend they use the search bar or browse /products.
+- Never make up order data. Only use what's provided above.
+- Keep responses under 120 words. Use emojis sparingly.
+- End with a follow-up offer like "Anything else I can help with? 😊"`;
+}
+
+// ── Main Component ─────────────────────────────────────────────────────
 export const ChatBot = () => {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: 0,
+      id: 1,
       from: "bot",
-      text: "Hi! 👋 I'm ARTIXO Assistant. How can I help you today?",
+      text: "Hi there! 👋 I'm ARTIXO's support bot. I can help you track orders, answer questions about delivery, returns, and more!\n\nWhat can I help you with today?",
       time: now(),
     },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [history, setHistory] = useState<{ role: string; content: string }[]>([]);
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load user orders once
+  useEffect(() => {
+    if (user) fetchUserOrders(user.id).then(setOrders);
+  }, [user]);
+
+  // Scroll to bottom on new message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
+  // Focus input when opened
   useEffect(() => {
     if (open) {
       setUnread(0);
@@ -146,183 +140,235 @@ export const ChatBot = () => {
     }
   }, [open]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: Message = { id: Date.now(), from: "user", text, time: now() };
-    setMessages((m) => [...m, userMsg]);
+  const addBotMessage = useCallback((text: string, links?: { label: string; to: string }[]) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), from: "bot", text, links, time: now() },
+    ]);
+    if (!open) setUnread((n) => n + 1);
+  }, [open]);
+
+  const send = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || typing) return;
+
+    // Add user message
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), from: "user", text: trimmed, time: now() },
+    ]);
     setInput("");
     setTyping(true);
 
-    setTimeout(
-      () => {
-        const reply = getReply(text);
-        setTyping(false);
-        setMessages((m) => [
-          ...m,
-          {
-            id: Date.now() + 1,
-            from: "bot",
-            text: reply.text,
-            link: reply.link,
-            time: now(),
-          },
-        ]);
-        if (!open) setUnread((n) => n + 1);
-      },
-      800 + Math.random() * 600,
-    );
+    // Build conversation history
+    const newHistory = [
+      ...history,
+      { role: "user", content: trimmed },
+    ];
+
+    // Check for product search intent
+    const productKeywords = trimmed.match(/show me|find|search|looking for|i want|buy (.+)/i);
+    let extraContext = "";
+    if (productKeywords) {
+      const keyword = productKeywords[1] ?? trimmed.replace(/show me|find|search|looking for|i want/gi, "").trim();
+      if (keyword.length > 2) {
+        const found = await fetchProducts(keyword);
+        if (found.length) {
+          extraContext = `\n\n[PRODUCT SEARCH RESULTS for "${keyword}"]: ${found.map((p: any) => `${p.name} — LKR ${Number(p.price).toLocaleString()}`).join(", ")}. Tell the user about these results and suggest they visit /products to browse.`;
+        }
+      }
+    }
+
+    const systemPrompt = buildSystem(orders, !!user);
+    const aiMessages = [
+      { role: "system", content: systemPrompt + extraContext },
+      ...newHistory,
+    ];
+
+    const reply = await askAI(aiMessages);
+    setTyping(false);
+
+    // Detect links to include
+    const links: { label: string; to: string }[] = [];
+    if (/order|track/.test(trimmed.toLowerCase()) && !user) {
+      links.push({ label: "Sign in to see orders", to: "/auth" });
+    }
+    if (/product|shop|buy|browse/.test(trimmed.toLowerCase())) {
+      links.push({ label: "Browse products", to: "/products" });
+    }
+
+    addBotMessage(reply, links.length ? links : undefined);
+    setHistory([...newHistory, { role: "assistant", content: reply }]);
+  }, [typing, history, orders, user, addBotMessage]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    send(input);
+  };
+
+  const handleReset = () => {
+    setMessages([{
+      id: 1,
+      from: "bot",
+      text: "Chat cleared! How can I help you? 😊",
+      time: now(),
+    }]);
+    setHistory([]);
   };
 
   return (
     <>
       {/* Floating button */}
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
-        style={{ background: "linear-gradient(135deg, hsl(343 73% 32%), hsl(343 73% 42%))" }}
-        aria-label="Open chat"
+        onClick={() => setOpen((v) => !v)}
+        className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95"
+        style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+        aria-label="Customer Support"
       >
         {open ? (
           <X className="h-6 w-6 text-white" />
         ) : (
-          <MessageCircle className="h-6 w-6 text-white" />
-        )}
-        {!open && unread > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-yellow-400 text-black text-[10px] font-bold flex items-center justify-center">
-            {unread}
-          </span>
+          <>
+            <MessageCircle className="h-6 w-6 text-white" />
+            {unread > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-yellow-400 text-yellow-900 text-[10px] font-bold flex items-center justify-center">
+                {unread}
+              </span>
+            )}
+          </>
         )}
       </button>
 
-      {/* Chat panel */}
-      {open && (
+      {/* Chat window */}
+      <div
+        className={`fixed bottom-24 right-5 z-50 w-[340px] sm:w-[380px] rounded-2xl overflow-hidden shadow-2xl border border-white/20 transition-all duration-300 origin-bottom-right ${
+          open ? "scale-100 opacity-100 pointer-events-auto" : "scale-90 opacity-0 pointer-events-none"
+        }`}
+        style={{ maxHeight: "520px", display: "flex", flexDirection: "column" }}
+      >
+        {/* Header */}
         <div
-          className="fixed bottom-24 right-6 z-50 w-[340px] sm:w-[380px] rounded-3xl overflow-hidden shadow-2xl flex flex-col"
-          style={{ maxHeight: "520px", background: "#fff" }}
+          className="px-4 py-3 flex items-center gap-3 shrink-0"
+          style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
         >
-          {/* Header */}
-          <div
-            className="px-4 py-3 flex items-center gap-3"
-            style={{ background: "linear-gradient(135deg, hsl(343 73% 28%), hsl(343 73% 38%))" }}
+          <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Bot className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-semibold text-sm leading-tight">ARTIXO Support</p>
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+              <p className="text-white/70 text-xs">AI-powered • Always online</p>
+            </div>
+          </div>
+          <button
+            onClick={handleReset}
+            className="p-1.5 rounded-full hover:bg-white/20 transition-colors"
+            title="Clear chat"
           >
-            <div className="h-9 w-9 rounded-full bg-yellow-400 flex items-center justify-center shrink-0">
-              <ShoppingBag className="h-5 w-5 text-yellow-900" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-white text-sm">ARTIXO Assistant</p>
-              <p className="text-white/65 text-xs flex items-center gap-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block" />
-                Online · Replies instantly
-              </p>
-            </div>
-            <button onClick={() => setOpen(false)} className="text-white/60 hover:text-white transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+            <RotateCcw className="h-4 w-4 text-white/70" />
+          </button>
+        </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-3 bg-gray-50" style={{ minHeight: 0 }}>
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-2 ${msg.from === "user" ? "flex-row-reverse" : "flex-row"}`}
-              >
-                {/* Avatar */}
+        {/* Messages */}
+        <div
+          className="flex-1 overflow-y-auto p-3 space-y-3"
+          style={{ background: "#f8f9fa", minHeight: 0 }}
+        >
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex gap-2 ${msg.from === "user" ? "flex-row-reverse" : "flex-row"}`}
+            >
+              {msg.from === "bot" && (
+                <div className="h-7 w-7 rounded-full shrink-0 flex items-center justify-center mt-0.5"
+                  style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}>
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+              )}
+              <div className={`max-w-[80%] ${msg.from === "user" ? "items-end" : "items-start"} flex flex-col gap-1`}>
                 <div
-                  className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                    msg.from === "bot"
-                      ? "bg-yellow-400"
-                      : "bg-secondary/20"
+                  className={`rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                    msg.from === "user"
+                      ? "text-white rounded-tr-sm"
+                      : "bg-white text-gray-800 rounded-tl-sm shadow-sm border border-gray-100"
                   }`}
+                  style={msg.from === "user" ? { background: "linear-gradient(135deg, #8B1A2E, #c0392b)" } : {}}
                 >
-                  {msg.from === "bot" ? (
-                    <Bot className="h-4 w-4 text-yellow-900" />
-                  ) : (
-                    <User className="h-4 w-4 text-secondary" />
-                  )}
+                  {msg.text}
                 </div>
-
-                <div className={`max-w-[75%] space-y-1 ${msg.from === "user" ? "items-end" : "items-start"} flex flex-col`}>
-                  <div
-                    className={`px-3 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
-                      msg.from === "bot"
-                        ? "bg-white border border-gray-100 text-gray-800 rounded-tl-sm shadow-sm"
-                        : "text-white rounded-tr-sm"
-                    }`}
-                    style={
-                      msg.from === "user"
-                        ? { background: "hsl(343 73% 32%)" }
-                        : undefined
-                    }
+                {msg.links?.map((l) => (
+                  <Link
+                    key={l.to}
+                    to={l.to}
+                    onClick={() => setOpen(false)}
+                    className="text-xs px-3 py-1 rounded-full font-medium text-white inline-block mt-1"
+                    style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
                   >
-                    {msg.text}
-                  </div>
-                  {msg.link && (
-                    <Link
-                      to={msg.link.to}
-                      onClick={() => setOpen(false)}
-                      className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors"
-                      style={{ color: "hsl(343 73% 32%)", borderColor: "hsl(343 73% 32% / 0.3)" }}
-                    >
-                      {msg.link.label} →
-                    </Link>
-                  )}
-                  <span className="text-[10px] text-gray-400">{msg.time}</span>
-                </div>
+                    {l.label} →
+                  </Link>
+                ))}
+                <span className="text-[10px] text-gray-400 px-1">{msg.time}</span>
               </div>
-            ))}
+            </div>
+          ))}
 
-            {/* Typing indicator */}
-            {typing && (
-              <div className="flex gap-2 items-center">
-                <div className="h-7 w-7 rounded-full bg-yellow-400 flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4 text-yellow-900" />
-                </div>
-                <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex gap-1 items-center">
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
+          {/* Typing indicator */}
+          {typing && (
+            <div className="flex gap-2 items-end">
+              <div className="h-7 w-7 rounded-full shrink-0 flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}>
+                <Bot className="h-4 w-4 text-white" />
               </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
+              <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-gray-100 flex gap-1 items-center">
+                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
 
-          {/* Quick replies */}
-          <div className="px-3 py-2 bg-white border-t border-gray-100 flex gap-1.5 overflow-x-auto scrollbar-none">
-            {QUICK_REPLIES.map((q) => (
+        {/* Quick actions (shown when chat is short) */}
+        {messages.length <= 2 && !typing && (
+          <div className="px-3 pb-2 flex flex-wrap gap-1.5 shrink-0" style={{ background: "#f8f9fa" }}>
+            {QUICK.map((q) => (
               <button
-                key={q}
-                onClick={() => sendMessage(q)}
-                className="shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium whitespace-nowrap transition-colors hover:bg-secondary/5"
-                style={{ borderColor: "hsl(343 73% 32% / 0.25)", color: "hsl(343 73% 32%)" }}
+                key={q.msg}
+                onClick={() => send(q.msg)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-gray-200 text-gray-700 hover:border-red-200 hover:text-red-800 transition-colors"
               >
-                {q}
+                <q.icon className="h-3 w-3" />
+                {q.label}
               </button>
             ))}
           </div>
+        )}
 
-          {/* Input */}
-          <div className="px-3 py-3 bg-white border-t border-gray-100 flex gap-2 items-center">
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage(input)}
-              placeholder="Type a message..."
-              className="flex-1 text-sm px-4 py-2 rounded-full bg-gray-100 border-0 outline-none focus:ring-2 focus:ring-secondary/20 placeholder:text-gray-400"
-            />
-            <button
-              onClick={() => sendMessage(input)}
-              disabled={!input.trim()}
-              className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, hsl(343 73% 32%), hsl(343 73% 42%))" }}
-            >
-              <Send className="h-4 w-4 text-white" />
-            </button>
-          </div>
-        </div>
-      )}
+        {/* Input */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 shrink-0 bg-white"
+        >
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your question…"
+            className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400 text-gray-800"
+            disabled={typing}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || typing}
+            className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-all disabled:opacity-30"
+            style={{ background: "linear-gradient(135deg, #8B1A2E, #c0392b)" }}
+          >
+            <Send className="h-3.5 w-3.5 text-white" />
+          </button>
+        </form>
+      </div>
     </>
   );
 };

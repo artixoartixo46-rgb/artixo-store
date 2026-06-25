@@ -188,7 +188,6 @@ export const ReviewSection = ({ productId, productName }: Props) => {
           user_id: user.id,
           rating: myRating,
           comment: myText.trim() || "",
-          updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id,product_id" }
       );

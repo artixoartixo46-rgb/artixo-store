@@ -150,4 +150,9 @@ export const HeroBanner = () => {
                 />
               ))}
             </div>
-  
+          </>
+        )}
+      </div>
+    </section>
+  );
+};

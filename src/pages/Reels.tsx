@@ -342,7 +342,7 @@ const Reels = () => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="h-10 w-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
           <p className="text-white/60 text-sm">Loading reels…</p>
@@ -353,7 +353,7 @@ const Reels = () => {
 
   if (!reels.length) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center text-center p-6">
+      <div className="fixed inset-0 z-[60] bg-black flex items-center justify-center text-center p-6">
         <SEO title="Reels — ARTIXO" description="Shop Sri Lanka's trending products through short videos" />
         <div>
           <div className="text-6xl mb-4">🎬</div>
@@ -373,7 +373,7 @@ const Reels = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black overflow-hidden">
+    <div className="fixed inset-0 z-[60] bg-black overflow-hidden">
       <SEO title="Reels — ARTIXO" description="Discover products through short videos. Shop Sri Lanka's trending items." />
 
       {/* Scroll container */}

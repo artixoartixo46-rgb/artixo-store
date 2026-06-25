@@ -142,7 +142,7 @@ export const AiSearchBar = ({ onSearch }: { onSearch?: () => void } = {}) => {
   const isListening = voiceState === "listening";
 
   return (
-    <form onSubmit={handleSearch} className="w-full">
+    <form onSubmit={handleSearch} className="w-full max-w-xl mx-auto">
       <div
         className={cn(
           "relative flex items-center rounded-full transition-all duration-300",

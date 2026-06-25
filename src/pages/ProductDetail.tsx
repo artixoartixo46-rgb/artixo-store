@@ -408,8 +408,20 @@ const ProductDetail = () => {
               <p className="text-xs text-muted-foreground">Inclusive of all taxes</p>
             </div>
 
+            {(product as any).is_digital && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 w-fit">
+                <span className="text-base">⬇️</span>
+                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Digital Product — Instant Download</span>
+              </div>
+            )}
+
             <div className="flex items-center gap-2 text-sm">
-              {product.stock > 0 ? (
+              {(product as any).is_digital ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="text-success font-medium">Available — Download after purchase</span>
+                </>
+              ) : product.stock > 0 ? (
                 <>
                   <CheckCircle2 className="h-4 w-4 text-success" />
                   <span className="text-success font-medium">In Stock</span>

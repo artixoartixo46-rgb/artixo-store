@@ -31,6 +31,7 @@ interface Product {
   image_url: string | null; description: string | null; category_id: string | null;
   original_price: number | null; brand: string | null; sku: string | null;
   images: string[]; variants: any; model_url?: string | null;
+  is_digital?: boolean; digital_file_url?: string | null;
 }
 
 const emptyForm = {
@@ -40,6 +41,9 @@ const emptyForm = {
   sizes: "",
   video_url: "",
   model_url: "",
+  // Digital product fields
+  is_digital: false,
+  digital_file_url: "",
   // Rental fields
   listing_type: "sale" as "sale" | "rent" | "both",
   rent_price_per_day: "",
@@ -480,6 +484,8 @@ const SellerDashboard = () => {
       sizes: Array.isArray(v.sizes) ? v.sizes.join(", ") : "",
       video_url: typeof v.video_url === "string" ? v.video_url : "",
       model_url: typeof (p as any).model_url === "string" ? (p as any).model_url : "",
+      is_digital: !!(p as any).is_digital,
+      digital_file_url: typeof (p as any).digital_file_url === "string" ? (p as any).digital_file_url : "",
     });
     setOpen(true);
   };
@@ -541,6 +547,19 @@ const SellerDashboard = () => {
     e.target.value = "";
   };
 
+  const handleDigitalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file || !user) return;
+    if (file.size > 100 * 1024 * 1024) { toast.error("File must be under 100MB"); return; }
+    setUploading(true);
+    const path = `${user.id}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("digital-files").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); setUploading(false); return; }
+    setForm((f) => ({ ...f, digital_file_url: path }));
+    setUploading(false);
+    toast.success("Digital file uploaded!");
+    e.target.value = "";
+  };
+
   const handleModelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     if (file.size > 50 * 1024 * 1024) { toast.error("3D model must be under 50MB"); return; }
@@ -568,6 +587,8 @@ const SellerDashboard = () => {
       category_id: form.category_id || null, image_url: form.image_url || form.images[0] || null,
       images: form.images, brand: form.brand || null, sku: form.sku || null,
       model_url: form.model_url.trim() || null,
+      is_digital: form.is_digital,
+      digital_file_url: form.is_digital ? (form.digital_file_url.trim() || null) : null,
       variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
       // Rental fields
       listing_type: form.listing_type,
@@ -1373,6 +1394,58 @@ const SellerDashboard = () => {
                   )}
                   <input type="file" accept=".glb,.gltf" className="hidden" onChange={handleModelUpload} disabled={uploading} />
                 </label>
+              )}
+            </div>
+
+            {/* Digital Product */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-5 w-5 rounded bg-purple-500/10 flex items-center justify-center">
+                    <span className="text-[10px]">⬇️</span>
+                  </div>
+                  <Label className="font-semibold text-sm">Digital Product</Label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, is_digital: !f.is_digital, digital_file_url: "" }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_digital ? "bg-purple-600" : "bg-muted"}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.is_digital ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+
+              {form.is_digital && (
+                <div className="space-y-2 pl-1">
+                  <p className="text-xs text-muted-foreground">Upload the file buyers will download after purchase (PDF, ZIP, MP3, PSD, etc. — max 100MB).</p>
+                  {form.digital_file_url ? (
+                    <div className="flex items-center gap-3 p-3 rounded-xl border bg-purple-500/5 border-purple-500/20">
+                      <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                        <span className="text-lg">📁</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{form.digital_file_url.split("/").pop()}</p>
+                        <p className="text-[10px] text-green-600 font-medium">Uploaded ✓</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, digital_file_url: "" }))}
+                        className="shrink-0 text-destructive hover:text-destructive/80 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 border-2 border-dashed border-purple-400/40 rounded-xl p-4 cursor-pointer hover:bg-purple-500/5 transition-smooth">
+                      {uploading ? (
+                        <><div className="h-4 w-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" /><span className="text-sm">Uploading file…</span></>
+                      ) : (
+                        <><span className="text-xl">📂</span><span className="text-sm text-muted-foreground">Upload digital file (PDF, ZIP, MP3, PSD…)</span></>
+                      )}
+                      <input type="file" accept=".pdf,.zip,.rar,.mp3,.wav,.psd,.ai,.epub,.docx,.xlsx,.png,.jpg" className="hidden" onChange={handleDigitalFileUpload} disabled={uploading} />
+                    </label>
+                  )}
+                </div>
               )}
             </div>
 

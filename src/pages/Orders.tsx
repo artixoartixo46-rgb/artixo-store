@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { formatLKR } from "@/lib/format";
-import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw, Truck, ExternalLink, Wifi } from "lucide-react";
+import { Package, ChevronDown, ChevronUp, MapPin, Phone, Search, RotateCcw, Truck, ExternalLink, Wifi, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SriLankaDeliveryMap } from "@/components/SriLankaDeliveryMap";
@@ -55,7 +55,7 @@ const Orders = () => {
     if (!user) return;
     const { data: ords, error } = await supabase
       .from("orders")
-      .select("*, order_items(*, product:products(image_url, images))")
+      .select("*, order_items(*, product:products(image_url, images, is_digital, digital_file_url, name))")
       .eq("customer_id", user.id)
       .order("created_at", { ascending: false });
     if (error) {
@@ -129,7 +129,7 @@ const Orders = () => {
     setTracked(null);
     const { data, error } = await supabase
       .from("orders")
-      .select("*, order_items(*, product:products(image_url, images))")
+      .select("*, order_items(*, product:products(image_url, images, is_digital, digital_file_url, name))")
       .or(`id.eq.${id},id.ilike.${id}%`)
       .limit(1)
       .maybeSingle();
@@ -166,6 +166,21 @@ const Orders = () => {
   if (!authLoading && !user) return <Navigate to="/auth" replace />;
   if (user && roles.includes("admin")) return <Navigate to="/admin" replace />;
   if (loading) return <div className="container py-12 text-center">Loading...</div>;
+
+  const handleDownload = async (filePath: string, productName: string) => {
+    const { data, error } = await supabase.storage
+      .from("digital-files")
+      .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+    if (error || !data?.signedUrl) {
+      toast.error("Could not generate download link");
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = data.signedUrl;
+    a.download = productName || "download";
+    a.click();
+    toast.success("Download started!");
+  };
 
   const renderOrderCard = (o: any, opts: { expandable?: boolean } = { expandable: true }) => {
     const isOpen = opts.expandable ? expanded === o.id : true;
@@ -236,9 +251,28 @@ const Orders = () => {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="truncate">{it.product_name}</div>
-                  <div className="text-xs text-muted-foreground">Qty {it.quantity}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    {it.product?.is_digital ? (
+                      <span className="text-purple-600 font-medium">⬇️ Digital</span>
+                    ) : (
+                      <span>Qty {it.quantity}</span>
+                    )}
+                  </div>
                 </div>
-                <div className="font-medium">{formatLKR(it.unit_price * it.quantity)}</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium">{formatLKR(it.unit_price * it.quantity)}</div>
+                  {it.product?.is_digital && it.product?.digital_file_url && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 gap-1 text-xs border-purple-400/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10"
+                      onClick={() => handleDownload(it.product.digital_file_url, it.product_name)}
+                    >
+                      <Download className="h-3 w-3" />
+                      Download
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}

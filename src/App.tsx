@@ -33,6 +33,7 @@ const SellerStorefront   = lazy(() => import("./pages/SellerStorefront"));
 const AffiliateDashboard = lazy(() => import("./pages/AffiliateDashboard"));
 const OutfitBuilder      = lazy(() => import("./pages/OutfitBuilder"));
 const Rentals            = lazy(() => import("./pages/Rentals"));
+const Reels              = lazy(() => import("./pages/Reels"));
 const NotFound           = lazy(() => import("./pages/NotFound"));
 
 // Capture ?ref= referral code on any page load

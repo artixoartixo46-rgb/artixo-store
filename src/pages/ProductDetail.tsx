@@ -458,6 +458,33 @@ const ProductDetail = () => {
               )}
             </div>
 
+            {/* Color Variants */}
+            {Array.isArray((product as any).variants?.colors) && (product as any).variants.colors.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2.5 text-sm">🎨 Available Colors</h3>
+                <div className="flex flex-wrap gap-2">
+                  {((product as any).variants.colors as { name: string; hex: string; images: string[] }[]).map((c, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      title={c.name}
+                      onClick={() => {
+                        if (c.images && c.images.length > 0) setActiveImage(c.images[0]);
+                      }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-full border transition-smooth hover:border-primary/60 hover:bg-muted/50"
+                      style={{ borderColor: c.images?.length && activeImage === c.images[0] ? c.hex : undefined }}
+                    >
+                      <span
+                        className="h-4 w-4 rounded-full border border-border/40 shrink-0"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span className="text-xs font-medium">{c.name || c.hex}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Separator />
 
             <div>

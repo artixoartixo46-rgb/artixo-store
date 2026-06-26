@@ -42,6 +42,7 @@ const emptyForm = {
   sizes: "",
   video_url: "",
   model_url: "",
+  colors: [] as { name: string; hex: string; images: string[] }[],
   // Digital product fields
   is_digital: false,
   digital_file_url: "",
@@ -486,6 +487,7 @@ const SellerDashboard = () => {
       image_url: p.image_url ?? "", brand: p.brand ?? "", sku: p.sku ?? "",
       images: Array.isArray(p.images) ? p.images : [],
       sizes: Array.isArray(v.sizes) ? v.sizes.join(", ") : "",
+      colors: Array.isArray(v.colors) ? v.colors : [],
       video_url: typeof v.video_url === "string" ? v.video_url : "",
       model_url: typeof (p as any).model_url === "string" ? (p as any).model_url : "",
       is_digital: !!(p as any).is_digital,
@@ -566,6 +568,30 @@ const SellerDashboard = () => {
     e.target.value = "";
   };
 
+  const uploadColorImage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+    const path = `${user.id}/colors/${Date.now()}-${Math.random().toString(36).slice(2)}.${file.name.split(".").pop()}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) { toast.error(error.message); return null; }
+    const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+    return pub.publicUrl;
+  };
+
+  const addColor = () => setForm((f) => ({ ...f, colors: [...f.colors, { name: "", hex: "#000000", images: [] }] }));
+  const removeColor = (idx: number) => setForm((f) => ({ ...f, colors: f.colors.filter((_, i) => i !== idx) }));
+  const updateColor = (idx: number, patch: Partial<{ name: string; hex: string; images: string[] }>) =>
+    setForm((f) => ({ ...f, colors: f.colors.map((c, i) => i === idx ? { ...c, ...patch } : c) }));
+
+  const handleColorImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, colorIdx: number) => {
+    const files = Array.from(e.target.files ?? []); if (!files.length) return;
+    setUploading(true);
+    const urls: string[] = [];
+    for (const file of files) { const u = await uploadColorImage(file); if (u) urls.push(u); }
+    updateColor(colorIdx, { images: [...(form.colors[colorIdx]?.images ?? []), ...urls].slice(0, 6) });
+    setUploading(false);
+    e.target.value = "";
+  };
+
   const handleModelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file || !user) return;
     if (file.size > 50 * 1024 * 1024) { toast.error("3D model must be under 50MB"); return; }
@@ -597,7 +623,11 @@ const SellerDashboard = () => {
       digital_file_url: form.is_digital ? (form.digital_file_url.trim() || null) : null,
       buyer_protection: form.buyer_protection,
       authenticity: form.authenticity,
-      variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
+      variants: {
+        sizes: sizesArr,
+        ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}),
+        ...(form.colors.length > 0 ? { colors: form.colors } : {}),
+      },
       // Rental fields
       listing_type: form.listing_type,
       rent_price_per_day: form.rent_price_per_day ? parseFloat(form.rent_price_per_day) : null,
@@ -1259,6 +1289,77 @@ const SellerDashboard = () => {
               </Select>
             </div>
             <div><Label>Sizes (comma-separated)</Label><Input placeholder="S, M, L, XL" value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} /></div>
+
+            {/* Color Variants */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="font-semibold flex items-center gap-1.5">🎨 Color Variants <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <Button type="button" size="sm" variant="outline" onClick={addColor} className="h-7 text-xs gap-1">
+                  <Plus className="h-3 w-3" /> Add Color
+                </Button>
+              </div>
+
+              {form.colors.length === 0 && (
+                <p className="text-xs text-muted-foreground">Add colors to let buyers see available options + images per color.</p>
+              )}
+
+              {form.colors.map((color, idx) => (
+                <div key={idx} className="border rounded-xl p-3 space-y-3 bg-muted/20">
+                  {/* Color name + picker + remove */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={color.hex}
+                      onChange={(e) => updateColor(idx, { hex: e.target.value })}
+                      className="h-8 w-8 rounded-lg border cursor-pointer shrink-0 p-0.5 bg-transparent"
+                      title="Pick color"
+                    />
+                    <Input
+                      placeholder="Color name (e.g. Midnight Black)"
+                      value={color.name}
+                      onChange={(e) => updateColor(idx, { name: e.target.value })}
+                      className="h-8 text-sm flex-1"
+                    />
+                    <button type="button" onClick={() => removeColor(idx)} className="text-destructive hover:text-destructive/80 shrink-0">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Per-color images */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-2">Images for this color (up to 6)</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {color.images.map((url, imgIdx) => (
+                        <div key={imgIdx} className="relative h-16 w-16 rounded-lg overflow-hidden border group">
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => updateColor(idx, { images: color.images.filter((_, i) => i !== imgIdx) })}
+                            className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {color.images.length < 6 && (
+                        <label className="h-16 w-16 rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted transition-smooth shrink-0">
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => handleColorImageUpload(e, idx)}
+                            disabled={uploading}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <Separator />
             <div>
               <div className="flex items-center justify-between mb-1">

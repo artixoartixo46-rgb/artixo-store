@@ -102,6 +102,22 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
             <span className="text-xs text-muted-foreground ml-0.5">({count})</span>
           </div>
         )}
+        {/* Color swatches */}
+        {Array.isArray((p as any).variants?.colors) && (p as any).variants.colors.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {((p as any).variants.colors as { name: string; hex: string }[]).slice(0, 6).map((c, i) => (
+              <div
+                key={i}
+                title={c.name}
+                className="h-4 w-4 rounded-full border border-border/60 shrink-0"
+                style={{ backgroundColor: c.hex }}
+              />
+            ))}
+            {(p as any).variants.colors.length > 6 && (
+              <span className="text-[10px] text-muted-foreground">+{(p as any).variants.colors.length - 6}</span>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-col leading-tight">
             <span className="font-display font-bold text-primary">{formatLKR(p.price)}</span>

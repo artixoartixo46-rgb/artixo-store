@@ -74,7 +74,13 @@ const Orders = () => {
       setOrders(ordersWithItems);
     } catch (e: any) {
       console.error("Orders error:", e);
-      toast.error("Failed to load orders");
+      // Only show toast for non-auth errors (auth errors happen during token refresh and self-resolve)
+      const msg = e?.message ?? "";
+      const isAuthError = msg.includes("JWT") || msg.includes("Auth") || msg.includes("token") || msg.includes("session");
+      if (!isAuthError) {
+        toast.error("Failed to load orders");
+      }
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -133,7 +139,7 @@ const Orders = () => {
       setRealtimeConnected(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user?.id]); // Use user.id not user — prevents re-fire on every JWT token refresh
 
   const handleTrack = async () => {
     const id = trackId.trim();

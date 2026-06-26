@@ -21,6 +21,7 @@ import { formatLKR } from "@/lib/format";
 import { ReelsTab } from "@/components/ReelsTab";
 import { SellerDisputesTab } from "@/components/SellerDisputesTab";
 import { ShoppableTab } from "@/components/ShoppableTab";
+import { SellerIdVerification } from "@/components/SellerIdVerification";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
@@ -1120,6 +1121,9 @@ const SellerDashboard = () => {
                 )}
               </div>
             </form>
+
+            {/* ── ID VERIFICATION ── */}
+            <SellerIdVerification userId={user?.id ?? ""} />
           </div>
         </TabsContent>
 

@@ -52,12 +52,17 @@ const SellerStorefront = () => {
 
       if (!prof) return;
 
+      // Check ID verification status
+      const { data: idVerif } = await (supabase as any)
+        .from("id_verifications").select("status").eq("seller_id", id).maybeSingle();
+
       setSeller({
         ...prof,
         bio: prof.shop_description ?? null,
         banner_url: prof.banner_url ?? null,
         avatar_url: prof.avatar_url ?? null,
         is_verified: prof.is_verified ?? false,
+        id_verified: idVerif?.status === "approved",
       });
       setJoinedDate(prof.created_at ? new Date(prof.created_at).toLocaleDateString("en-LK", { year: "numeric", month: "long" }) : null);
 
@@ -204,6 +209,11 @@ const SellerStorefront = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="font-display text-2xl leading-tight">{displayName}</h1>
                 {seller.is_verified && <VerifiedBadge size="lg" />}
+                {(seller as any).id_verified && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                    🪪 ID Verified
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 {avgRating !== null && (

@@ -88,18 +88,25 @@ const ProductDetail = () => {
       }
 
       // Load seller profile
-      let sellerProfile: { fullName: string | null; shopName: string | null; isVerified: boolean; sellerId: string | null } | null = null;
+      let sellerProfile: { fullName: string | null; shopName: string | null; isVerified: boolean; idVerified: boolean; sellerId: string | null } | null = null;
       if (data.seller_id) {
         const { data: sData } = await (supabase as any)
           .from("profiles")
           .select("full_name, shop_name, is_verified")
           .eq("id", data.seller_id)
           .maybeSingle();
+
+        // Check ID verification
+        const { data: idVerif } = await (supabase as any)
+          .from("id_verifications").select("status").eq("seller_id", data.seller_id).maybeSingle();
+        const idVerified = idVerif?.status === "approved";
+
         if (sData) {
           sellerProfile = {
             fullName: sData.full_name ?? null,
             shopName: sData.shop_name ?? null,
             isVerified: sData.is_verified ?? false,
+            idVerified,
             sellerId: data.seller_id,
           };
         } else {
@@ -114,6 +121,7 @@ const ProductDetail = () => {
               fullName: sData2.full_name ?? null,
               shopName: sData2.shop_name ?? null,
               isVerified: false,
+              idVerified,
               sellerId: data.seller_id,
             };
           }
@@ -669,6 +677,11 @@ const ProductDetail = () => {
                       <span className="truncate">{product.sellerProfile?.shopName || product.sellerProfile?.fullName || "ARTIXO Seller"}</span>
                     )}
                     {product.sellerProfile?.isVerified && <VerifiedBadge size="sm" />}
+                    {product.sellerProfile?.idVerified && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-700 shrink-0">
+                        🪪 ID Verified
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

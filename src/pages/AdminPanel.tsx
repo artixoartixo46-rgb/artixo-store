@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import {
   Package, Check, X, Shield, LayoutDashboard, ShoppingBag, Users, ClipboardList,
   TrendingUp, DollarSign, Search, LogOut, Store, Image as ImageIcon, Clock, RotateCcw, Paintbrush, BadgeCheck,
-  Bug, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Loader2, Gift, Banknote,
+  Bug, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Loader2, Gift, Banknote, ShieldCheck,
 } from "lucide-react";
 import { formatLKR } from "@/lib/format";
 import { AdminProductsSection } from "@/components/admin/AdminProductsSection";
@@ -91,7 +91,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals" | "wallets" | "disputes";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals" | "wallets" | "disputes" | "id-verify";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -108,6 +108,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "withdrawals", label: "Withdrawals", icon: Banknote },
   { key: "wallets", label: "Seller Wallets", icon: DollarSign },
   { key: "disputes", label: "Disputes", icon: RotateCcw },
+  { key: "id-verify", label: "ID Verifications", icon: ShieldCheck },
 ];
 
 // ── Stat card used on the dashboard overview ─────────────────────────────────
@@ -1121,6 +1122,7 @@ const AdminPanel = () => {
             {/* ── SELLER WALLETS SECTION ─────────────────────────────────────── */}
             {section === "wallets" && <AdminSellerWallets />}
             {section === "disputes" && <AdminDisputesSection />}
+            {section === "id-verify" && <AdminIdVerifications />}
 
           </main>
         </div>
@@ -1440,6 +1442,116 @@ const AdminDisputesSection = () => {
           )}
         </Card>
       ))}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Admin ID Verifications Panel
+───────────────────────────────────────────────────────────────────────────── */
+const AdminIdVerifications = () => {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState<string | null>(null);
+
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("id_verifications")
+      .select("*, seller:profiles(full_name, shop_name, email)")
+      .order("created_at", { ascending: false });
+    setItems(data ?? []);
+    setLoading(false);
+  };
+
+  const review = async (id: string, status: "approved" | "rejected") => {
+    setSubmitting(id);
+    await (supabase as any).from("id_verifications").update({
+      status,
+      admin_note: notes[id]?.trim() || null,
+      reviewed_at: new Date().toISOString(),
+    }).eq("id", id);
+    setSubmitting(null);
+    toast.success(`Verification ${status}`);
+    load();
+  };
+
+  const STATUS_UI: Record<string, { label: string; cls: string }> = {
+    pending:  { label: "Pending Review", cls: "bg-yellow-100 text-yellow-700" },
+    approved: { label: "Approved ✓",     cls: "bg-green-100 text-green-700" },
+    rejected: { label: "Rejected",        cls: "bg-red-100 text-red-700" },
+  };
+
+  if (loading) return <div className="py-12 text-center text-muted-foreground">Loading…</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-display font-bold flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /> ID Verifications</h2>
+        <Badge variant="outline">{items.filter((i) => i.status === "pending").length} pending</Badge>
+      </div>
+
+      {items.length === 0 ? (
+        <Card className="p-12 text-center border-dashed text-muted-foreground">No ID verification requests yet.</Card>
+      ) : items.map((item) => {
+        const ui = STATUS_UI[item.status];
+        const seller = item.seller;
+        return (
+          <Card key={item.id} className="p-4 space-y-4">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p className="font-semibold">{seller?.shop_name || seller?.full_name || "Unknown Seller"}</p>
+                <p className="text-xs text-muted-foreground">{seller?.email} · Submitted {new Date(item.created_at).toLocaleDateString("en-LK")}</p>
+              </div>
+              <Badge className={ui?.cls}>{ui?.label}</Badge>
+            </div>
+
+            {/* Documents */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: "🪪 NIC Front", url: item.nic_front_url },
+                { label: "🔄 NIC Back",  url: item.nic_back_url },
+                { label: "🤳 Selfie + NIC", url: item.selfie_url },
+              ].map((doc) => (
+                <div key={doc.label} className="text-center">
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                    <img src={doc.url} alt={doc.label} className="w-full aspect-[4/3] object-cover rounded-lg border hover:opacity-90 transition-opacity" />
+                  </a>
+                  <p className="text-xs text-muted-foreground mt-1">{doc.label} <span className="text-primary text-[10px]">(click to zoom)</span></p>
+                </div>
+              ))}
+            </div>
+
+            {item.admin_note && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <span className="font-semibold text-xs text-muted-foreground">Admin note: </span>{item.admin_note}
+              </div>
+            )}
+
+            {item.status === "pending" && (
+              <div className="space-y-2 pt-2 border-t">
+                <Input
+                  placeholder="Note (optional — required for rejection)"
+                  value={notes[item.id] ?? ""}
+                  onChange={(e) => setNotes((n) => ({ ...n, [item.id]: e.target.value }))}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => review(item.id, "approved")} disabled={submitting === item.id} className="bg-green-600 hover:bg-green-700 text-white gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Approve & Give Badge
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => review(item.id, "rejected")} disabled={submitting === item.id} className="border-red-400 text-red-600 hover:bg-red-500/10 gap-1.5">
+                    <XCircle className="h-3.5 w-3.5" /> Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 };

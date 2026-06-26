@@ -56,14 +56,21 @@ const Orders = () => {
 
   const loadOrders = async () => {
     if (!user) return;
-    const { data: ords, error } = await supabase
+    // Try customer_id first, fall back to user_id
+    const { data: ords, error } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*, product:products(image_url, images, is_digital, digital_file_url, name))")
-      .eq("customer_id", user.id)
+      .select("*, order_items(*)")
+      .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
     if (error) {
-      console.error(error);
-      toast.error("Failed to load orders");
+      console.error("Orders error:", error);
+      // Try simple fallback query
+      const { data: fallback } = await (supabase as any)
+        .from("orders")
+        .select("*")
+        .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
+        .order("created_at", { ascending: false });
+      setOrders(fallback ?? []);
     } else {
       setOrders(ords ?? []);
     }
@@ -262,7 +269,11 @@ const Orders = () => {
 
         <div className="space-y-2 mb-3 text-sm">
           {orderItems.map((it: any, idx: number) => {
-            const img = it.product?.image_url || it.product?.images?.[0];
+            // Use product_snapshot (captured at order time) as primary source
+            const snap = it.product_snapshot ?? {};
+            const img = snap.image_url || (snap.images && snap.images[0]) || it.product?.image_url || it.product?.images?.[0];
+            const isDigital = snap.is_digital ?? it.product?.is_digital ?? false;
+            const digitalUrl = snap.digital_file_url ?? it.product?.digital_file_url;
             return (
               <div key={idx} className="flex items-center gap-3">
                 {img ? (
@@ -273,9 +284,9 @@ const Orders = () => {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="truncate">{it.product_name}</div>
+                  <div className="truncate">{it.product_name || snap.name}</div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    {it.product?.is_digital ? (
+                    {isDigital ? (
                       <span className="text-purple-600 font-medium">⬇️ Digital</span>
                     ) : (
                       <span>Qty {it.quantity}</span>
@@ -284,12 +295,12 @@ const Orders = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="font-medium">{formatLKR(it.unit_price * it.quantity)}</div>
-                  {it.product?.is_digital && it.product?.digital_file_url && (
+                  {isDigital && digitalUrl && (
                     <Button
                       size="sm"
                       variant="outline"
                       className="h-7 gap-1 text-xs border-purple-400/40 text-purple-700 dark:text-purple-300 hover:bg-purple-500/10"
-                      onClick={() => handleDownload(it.product.digital_file_url, it.product_name)}
+                      onClick={() => handleDownload(digitalUrl, it.product_name)}
                     >
                       <Download className="h-3 w-3" />
                       Download

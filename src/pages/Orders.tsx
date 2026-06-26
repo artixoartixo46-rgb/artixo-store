@@ -74,12 +74,9 @@ const Orders = () => {
       setOrders(ordersWithItems);
     } catch (e: any) {
       console.error("Orders error:", e);
-      // Only show toast for non-auth errors (auth errors happen during token refresh and self-resolve)
-      const msg = e?.message ?? "";
-      const isAuthError = msg.includes("JWT") || msg.includes("Auth") || msg.includes("token") || msg.includes("session");
-      if (!isAuthError) {
-        toast.error("Failed to load orders");
-      }
+      const msg = e?.message || e?.code || e?.hint || JSON.stringify(e) || "unknown";
+      // Show exact error so we can debug
+      toast.error(`Orders error: ${msg}`, { duration: 10000 });
       setOrders([]);
     } finally {
       setLoading(false);

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ const ProductDetail = () => {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [spinMode, setSpinMode] = useState(false);
+  const spinDragRef = useRef<{ startX: number; startIdx: number } | null>(null);
   const { add } = useCart();
   const { avg: realAvg, count: realCount } = useProductRating(id ?? "");
 
@@ -267,15 +269,30 @@ const ProductDetail = () => {
           {/* Image gallery */}
           <div className="lg:sticky lg:top-20 self-start space-y-2">
             <Card
-              className="aspect-square overflow-hidden bg-background relative group"
+              className="aspect-square overflow-hidden bg-background relative group select-none"
               onClick={() => {
+                if (spinMode) return;
                 if (activeImage && activeImage !== "__video__" && activeImage !== "__3d__") {
                   const i = gallery.indexOf(activeImage);
                   setLightboxIndex(i >= 0 ? i : 0);
                   setLightboxOpen(true);
                 }
               }}
-              style={{ cursor: activeImage && activeImage !== "__video__" && activeImage !== "__3d__" ? "zoom-in" : "default" }}
+              style={{ cursor: spinMode ? "ew-resize" : activeImage && activeImage !== "__video__" && activeImage !== "__3d__" ? "zoom-in" : "default" }}
+              onPointerDown={spinMode ? (e) => {
+                e.currentTarget.setPointerCapture(e.pointerId);
+                const idx = gallery.indexOf(activeImage);
+                spinDragRef.current = { startX: e.clientX, startIdx: idx >= 0 ? idx : 0 };
+              } : undefined}
+              onPointerMove={spinMode ? (e) => {
+                if (!spinDragRef.current || !gallery.length) return;
+                const dx = e.clientX - spinDragRef.current.startX;
+                const step = Math.round(dx / 30);
+                let newIdx = (spinDragRef.current.startIdx - step) % gallery.length;
+                if (newIdx < 0) newIdx += gallery.length;
+                setActiveImage(gallery[newIdx]);
+              } : undefined}
+              onPointerUp={spinMode ? () => { spinDragRef.current = null; } : undefined}
             >
               {activeImage === "__3d__" ? (
                 <ProductModelViewer
@@ -292,14 +309,28 @@ const ProductDetail = () => {
                 )
               ) : activeImage ? (
                 <>
-                  <img src={activeImage} alt={product.name} className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-[1.02]" />
-                  <div className="absolute bottom-2 right-2 bg-black/50 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ZoomIn className="h-4 w-4 text-white" />
-                  </div>
-                  {gallery.length > 1 && (
-                    <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] font-medium rounded-full px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {gallery.indexOf(activeImage) + 1} / {gallery.length}
-                    </div>
+                  <img src={activeImage} alt={product.name} className={`w-full h-full object-contain ${spinMode ? "" : "transition-transform duration-300 group-hover:scale-[1.02]"}`} draggable={false} />
+                  {spinMode ? (
+                    <>
+                      <div className="absolute inset-0 flex items-center justify-between px-3 pointer-events-none">
+                        <div className="bg-black/40 rounded-full p-1.5"><span className="text-white text-xs">◀</span></div>
+                        <div className="bg-black/40 rounded-full p-1.5"><span className="text-white text-xs">▶</span></div>
+                      </div>
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] font-semibold rounded-full px-3 py-1 pointer-events-none">
+                        360° — Drag to spin
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="absolute bottom-2 right-2 bg-black/50 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ZoomIn className="h-4 w-4 text-white" />
+                      </div>
+                      {gallery.length > 1 && (
+                        <div className="absolute bottom-2 left-2 bg-black/50 text-white text-[10px] font-medium rounded-full px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {gallery.indexOf(activeImage) + 1} / {gallery.length}
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               ) : (
@@ -311,6 +342,15 @@ const ProductDetail = () => {
 
             {(videoUrl || modelUrl || gallery.length > 1) && (
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {gallery.length >= 2 && (
+                  <button
+                    onClick={() => { setSpinMode((s) => !s); setActiveImage(gallery[0]); }}
+                    className={`shrink-0 h-16 w-16 rounded-lg overflow-hidden border-2 transition-smooth flex flex-col items-center justify-center gap-0.5 ${spinMode ? "border-primary bg-primary/10" : "border-transparent hover:border-primary/60 bg-muted"}`}
+                  >
+                    <span className="text-xl">🔄</span>
+                    <span className={`text-[9px] font-bold tracking-wide ${spinMode ? "text-primary" : "text-muted-foreground"}`}>360°</span>
+                  </button>
+                )}
                 {modelUrl && (
                   <button
                     onClick={() => setActiveImage("__3d__")}

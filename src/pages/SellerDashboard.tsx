@@ -20,6 +20,7 @@ import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { ReelsTab } from "@/components/ReelsTab";
 import { SellerDisputesTab } from "@/components/SellerDisputesTab";
+import { ShoppableTab } from "@/components/ShoppableTab";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
@@ -67,6 +68,7 @@ const SellerDashboard = () => {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
+  const [removingBg, setRemovingBg] = useState<number | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -577,6 +579,32 @@ const SellerDashboard = () => {
     return pub.publicUrl;
   };
 
+  const handleRemoveBg = async (imgUrl: string, imgIndex: number) => {
+    if (!user) return;
+    setRemovingBg(imgIndex);
+    try {
+      toast.info("Removing background… this may take a few seconds");
+      const { removeBackground } = await import("@imgly/background-removal");
+      const blob = await removeBackground(imgUrl);
+      // Upload the result
+      const path = `${user.id}/${Date.now()}-nobg.png`;
+      const { error } = await supabase.storage.from("product-images").upload(path, blob, { upsert: true, contentType: "image/png" });
+      if (error) { toast.error(error.message); return; }
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+      const newUrl = pub.publicUrl;
+      setForm((f) => ({
+        ...f,
+        images: f.images.map((u, i) => i === imgIndex ? newUrl : u),
+        image_url: f.image_url === imgUrl ? newUrl : f.image_url,
+      }));
+      toast.success("Background removed! ✨");
+    } catch (e: any) {
+      toast.error("BG removal failed: " + (e?.message ?? "unknown error"));
+    } finally {
+      setRemovingBg(null);
+    }
+  };
+
   const addColor = () => setForm((f) => ({ ...f, colors: [...f.colors, { name: "", hex: "#000000", images: [] }] }));
   const removeColor = (idx: number) => setForm((f) => ({ ...f, colors: f.colors.filter((_, i) => i !== idx) }));
   const updateColor = (idx: number, patch: Partial<{ name: string; hex: string; images: string[] }>) =>
@@ -695,6 +723,9 @@ const SellerDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="disputes" className="shrink-0">
               <span className="mr-1">⚖️</span> Disputes
+            </TabsTrigger>
+            <TabsTrigger value="shoppable" className="shrink-0">
+              <span className="mr-1">📸</span> Shop the Look
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1237,6 +1268,10 @@ const SellerDashboard = () => {
         <TabsContent value="disputes">
           <SellerDisputesTab sellerId={user.id} />
         </TabsContent>
+
+        <TabsContent value="shoppable">
+          <ShoppableTab sellerId={user.id} sellerProducts={products} />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -1387,6 +1422,17 @@ const SellerDashboard = () => {
                           <Star className="h-3 w-3" />
                         </button>
                       )}
+                      {/* Remove BG button */}
+                      <button
+                        type="button"
+                        title="Remove background (AI)"
+                        onClick={() => handleRemoveBg(url, i)}
+                        disabled={removingBg !== null}
+                        className="absolute bottom-0.5 left-0.5 bg-purple-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth text-[8px] font-bold leading-none px-1"
+                        style={{ fontSize: "8px" }}
+                      >
+                        {removingBg === i ? "…" : "✨BG"}
+                      </button>
                       {/* Delete button */}
                       <button
                         type="button"

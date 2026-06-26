@@ -72,6 +72,16 @@ export const ProductCard = ({ p }: { p: ProductCardData }) => {
           {p.stock === 0 && (
             <Badge variant="destructive" className="absolute bottom-2 right-2">Out of stock</Badge>
           )}
+          {(p as any).buyer_protection && (
+            <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-600/90 text-white text-[10px] font-semibold backdrop-blur-sm">
+              🛡️ Protected
+            </div>
+          )}
+          {(p as any).authenticity && (p as any).authenticity !== "original" && (p as any).authenticity !== "unspecified" && (
+            <div className={`absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold backdrop-blur-sm ${(p as any).authenticity === "replica" ? "bg-orange-500/90 text-white" : "bg-blue-500/90 text-white"}`}>
+              {(p as any).authenticity === "replica" ? "🔄 Replica" : "♻️ Refurbished"}
+            </div>
+          )}
         </div>
       </Link>
       <div className="p-3 space-y-2">

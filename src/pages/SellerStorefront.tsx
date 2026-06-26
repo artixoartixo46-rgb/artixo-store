@@ -37,6 +37,7 @@ const SellerStorefront = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [joinedDate, setJoinedDate] = useState<string | null>(null);
+  const [responseTime, setResponseTime] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -96,6 +97,21 @@ const SellerStorefront = () => {
           .eq("seller_id", id).eq("follower_id", user.id).maybeSingle();
         setIsFollowing(!!fol);
       }
+
+      // Response rate — avg time between question created_at and answer created_at
+      try {
+        const { data: qas } = await (supabase as any)
+          .from("product_questions").select("created_at, answered_at")
+          .eq("seller_id", id).not("answered_at", "is", null).limit(20);
+        if (qas && qas.length > 0) {
+          const diffs = qas.map((q: any) => new Date(q.answered_at).getTime() - new Date(q.created_at).getTime());
+          const avgMs = diffs.reduce((a: number, b: number) => a + b, 0) / diffs.length;
+          const avgHrs = avgMs / (1000 * 60 * 60);
+          if (avgHrs < 1) setResponseTime("within 1 hr");
+          else if (avgHrs < 24) setResponseTime(`within ${Math.round(avgHrs)} hrs`);
+          else setResponseTime(`within ${Math.round(avgHrs / 24)} days`);
+        }
+      } catch (_) { /* fail silently */ }
     } catch (e) {
       console.error("Storefront load error:", e);
     } finally {
@@ -201,6 +217,12 @@ const SellerStorefront = () => {
                   <Users className="h-3.5 w-3.5" />
                   <span>{followerCount} followers</span>
                 </div>
+                {responseTime && (
+                  <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 font-medium">
+                    <span>💬</span>
+                    <span>Replies {responseTime}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Package className="h-3.5 w-3.5" />
                   <span>{products.length} products</span>

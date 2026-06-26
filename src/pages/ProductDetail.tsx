@@ -408,12 +408,35 @@ const ProductDetail = () => {
               <p className="text-xs text-muted-foreground">Inclusive of all taxes</p>
             </div>
 
-            {(product as any).is_digital && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 w-fit">
-                <span className="text-base">⬇️</span>
-                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Digital Product — Instant Download</span>
-              </div>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {(product as any).is_digital && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <span className="text-base">⬇️</span>
+                  <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">Digital Product — Instant Download</span>
+                </div>
+              )}
+              {(product as any).buyer_protection && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <span className="text-base">🛡️</span>
+                  <span className="text-sm font-semibold text-green-700 dark:text-green-300">Buyer Protection — Money-back Guaranteed</span>
+                </div>
+              )}
+              {(product as any).authenticity && (product as any).authenticity !== "unspecified" && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                  (product as any).authenticity === "original" ? "bg-blue-500/10 border-blue-500/20" :
+                  (product as any).authenticity === "replica" ? "bg-orange-500/10 border-orange-500/20" :
+                  "bg-cyan-500/10 border-cyan-500/20"
+                }`}>
+                  <span className="text-base">
+                    {(product as any).authenticity === "original" ? "✅" : (product as any).authenticity === "replica" ? "🔄" : "♻️"}
+                  </span>
+                  <span className="text-sm font-semibold capitalize">
+                    {(product as any).authenticity === "original" ? "Original Product" :
+                     (product as any).authenticity === "replica" ? "Replica / Imitation" : "Refurbished Product"}
+                  </span>
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 text-sm">
               {(product as any).is_digital ? (

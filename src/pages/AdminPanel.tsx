@@ -91,7 +91,7 @@ const generateReceiptPDF = (order: any) => {
   doc.save(`receipt-${order.id.slice(0, 8)}.pdf`);
 };
 
-type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals" | "wallets";
+type Section = "dashboard" | "pending" | "products" | "orders" | "sellers" | "banners" | "returns" | "customize" | "verifications" | "errors" | "affiliates" | "withdrawals" | "wallets" | "disputes";
 
 const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -107,6 +107,7 @@ const navItems: { key: Section; label: string; icon: any }[] = [
   { key: "affiliates", label: "Affiliates", icon: Gift },
   { key: "withdrawals", label: "Withdrawals", icon: Banknote },
   { key: "wallets", label: "Seller Wallets", icon: DollarSign },
+  { key: "disputes", label: "Disputes", icon: RotateCcw },
 ];
 
 // ── Stat card used on the dashboard overview ─────────────────────────────────
@@ -1119,6 +1120,7 @@ const AdminPanel = () => {
 
             {/* ── SELLER WALLETS SECTION ─────────────────────────────────────── */}
             {section === "wallets" && <AdminSellerWallets />}
+            {section === "disputes" && <AdminDisputesSection />}
 
           </main>
         </div>
@@ -1338,6 +1340,106 @@ const AdminSellerWallets = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Admin Disputes Panel
+───────────────────────────────────────────────────────────────────────────── */
+const STATUS_COLORS: Record<string, string> = {
+  open: "bg-orange-100 text-orange-700",
+  seller_responded: "bg-blue-100 text-blue-700",
+  admin_review: "bg-purple-100 text-purple-700",
+  resolved: "bg-green-100 text-green-700",
+  rejected: "bg-red-100 text-red-700",
+};
+
+const AdminDisputesSection = () => {
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [decision, setDecision] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState<string | null>(null);
+
+  useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await (supabase as any)
+      .from("disputes").select("*").order("created_at", { ascending: false });
+    setDisputes(data ?? []);
+    setLoading(false);
+  };
+
+  const resolve = async (id: string, status: "resolved" | "rejected") => {
+    const adminDecision = decision[id]?.trim();
+    if (!adminDecision) { toast.error("Write a decision note first"); return; }
+    setSubmitting(id);
+    await (supabase as any).from("disputes").update({
+      status, admin_decision: adminDecision, resolved_at: new Date().toISOString()
+    }).eq("id", id);
+    setSubmitting(null);
+    toast.success(`Dispute ${status}`);
+    load();
+  };
+
+  if (loading) return <div className="py-12 text-center text-muted-foreground">Loading disputes…</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-display font-bold">⚖️ Dispute Resolution</h2>
+        <Badge variant="outline">{disputes.filter((d) => d.status === "open" || d.status === "seller_responded").length} pending</Badge>
+      </div>
+      {disputes.length === 0 ? (
+        <Card className="p-12 text-center border-dashed text-muted-foreground">No disputes filed yet.</Card>
+      ) : disputes.map((d) => (
+        <Card key={d.id} className="p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-semibold">{d.reason}</div>
+              <div className="text-xs text-muted-foreground">Order #{String(d.order_id).slice(0, 8)} · {new Date(d.created_at).toLocaleDateString("en-LK")}</div>
+            </div>
+            <Badge className={STATUS_COLORS[d.status] || ""}>{d.status.replace("_", " ").toUpperCase()}</Badge>
+          </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div className="bg-orange-500/5 rounded-lg p-3 text-sm border border-orange-500/20">
+              <p className="text-xs font-semibold text-orange-600 mb-1">Buyer's complaint:</p>
+              <p>{d.description}</p>
+            </div>
+            {d.seller_response && (
+              <div className="bg-blue-500/5 rounded-lg p-3 text-sm border border-blue-500/20">
+                <p className="text-xs font-semibold text-blue-600 mb-1">Seller's response:</p>
+                <p>{d.seller_response}</p>
+              </div>
+            )}
+          </div>
+          {d.admin_decision && (
+            <div className="bg-green-500/5 rounded-lg p-3 text-sm border border-green-500/20">
+              <p className="text-xs font-semibold text-green-600 mb-1">Admin Decision:</p>
+              <p>{d.admin_decision}</p>
+            </div>
+          )}
+          {!["resolved", "rejected"].includes(d.status) && (
+            <div className="space-y-2 pt-1 border-t">
+              <Textarea
+                placeholder="Write your decision / resolution note…"
+                rows={2}
+                value={decision[d.id] ?? ""}
+                onChange={(e) => setDecision((p) => ({ ...p, [d.id]: e.target.value }))}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => resolve(d.id, "resolved")} disabled={submitting === d.id} className="bg-green-600 hover:bg-green-700 text-white">
+                  ✅ Resolve — Favour Buyer
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => resolve(d.id, "rejected")} disabled={submitting === d.id} className="border-red-400 text-red-600 hover:bg-red-500/10">
+                  ❌ Reject Dispute
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      ))}
     </div>
   );
 };

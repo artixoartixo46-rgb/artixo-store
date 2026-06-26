@@ -19,6 +19,7 @@ import { sendPushToUser } from "@/hooks/usePushNotifications";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
 import { ReelsTab } from "@/components/ReelsTab";
+import { SellerDisputesTab } from "@/components/SellerDisputesTab";
 import { OrderStatusTimeline, OrderStatus } from "@/components/OrderStatusTimeline";
 import { SellerOrdersWidget, FilterKey, filterOrders } from "@/components/SellerOrdersWidget";
 import { SellerAnalytics } from "@/components/SellerAnalytics";
@@ -44,6 +45,9 @@ const emptyForm = {
   // Digital product fields
   is_digital: false,
   digital_file_url: "",
+  // Trust & Safety
+  buyer_protection: false,
+  authenticity: "original" as "original" | "replica" | "refurbished" | "unspecified",
   // Rental fields
   listing_type: "sale" as "sale" | "rent" | "both",
   rent_price_per_day: "",
@@ -486,6 +490,8 @@ const SellerDashboard = () => {
       model_url: typeof (p as any).model_url === "string" ? (p as any).model_url : "",
       is_digital: !!(p as any).is_digital,
       digital_file_url: typeof (p as any).digital_file_url === "string" ? (p as any).digital_file_url : "",
+      buyer_protection: !!(p as any).buyer_protection,
+      authenticity: (p as any).authenticity || "original",
     });
     setOpen(true);
   };
@@ -589,6 +595,8 @@ const SellerDashboard = () => {
       model_url: form.model_url.trim() || null,
       is_digital: form.is_digital,
       digital_file_url: form.is_digital ? (form.digital_file_url.trim() || null) : null,
+      buyer_protection: form.buyer_protection,
+      authenticity: form.authenticity,
       variants: { sizes: sizesArr, ...(form.video_url.trim() ? { video_url: form.video_url.trim() } : {}) },
       // Rental fields
       listing_type: form.listing_type,
@@ -654,6 +662,9 @@ const SellerDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="commission" className="shrink-0">
               <Banknote className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Commission </span>Wallet
+            </TabsTrigger>
+            <TabsTrigger value="disputes" className="shrink-0">
+              <span className="mr-1">⚖️</span> Disputes
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1192,6 +1203,10 @@ const SellerDashboard = () => {
         <TabsContent value="reels">
           <ReelsTab sellerId={user.id} products={products} />
         </TabsContent>
+
+        <TabsContent value="disputes">
+          <SellerDisputesTab sellerId={user.id} />
+        </TabsContent>
       </Tabs>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -1447,6 +1462,49 @@ const SellerDashboard = () => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Trust & Safety */}
+            <div className="space-y-3 pt-1 border-t">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Trust & Safety</p>
+
+              {/* Authenticity */}
+              <div>
+                <Label className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">🏷️ Product Authenticity</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: "original", label: "✅ Original", desc: "Brand new, genuine" },
+                    { value: "replica", label: "🔄 Replica", desc: "Copy / imitation" },
+                    { value: "refurbished", label: "♻️ Refurbished", desc: "Renewed / used" },
+                    { value: "unspecified", label: "❓ Unspecified", desc: "Not disclosed" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, authenticity: opt.value as any }))}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${form.authenticity === opt.value ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                    >
+                      <div className="text-sm font-medium">{opt.label}</div>
+                      <div className="text-[10px] text-muted-foreground">{opt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Buyer Protection */}
+              <div className="flex items-center justify-between p-3 rounded-xl border bg-green-500/5 border-green-500/20">
+                <div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold">🛡️ Offer Buyer Protection</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Money-back guarantee shown on your listing</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, buyer_protection: !f.buyer_protection }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.buyer_protection ? "bg-green-600" : "bg-muted"}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${form.buyer_protection ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">

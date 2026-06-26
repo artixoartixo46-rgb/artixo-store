@@ -50,6 +50,9 @@ const Orders = () => {
   const [submittingReturn, setSubmittingReturn] = useState(false);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(new Set());
+  const [disputeForm, setDisputeForm] = useState<{ orderId: string; reason: string; description: string } | null>(null);
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [filedDisputes, setFiledDisputes] = useState<Set<string>>(new Set());
 
   const loadOrders = async () => {
     if (!user) return;
@@ -180,6 +183,26 @@ const Orders = () => {
     a.download = productName || "download";
     a.click();
     toast.success("Download started!");
+  };
+
+  const submitDispute = async () => {
+    if (!disputeForm || !user) return;
+    if (!disputeForm.reason.trim() || !disputeForm.description.trim()) { toast.error("Please fill in all fields"); return; }
+    setSubmittingDispute(true);
+    const order = orders.find((o: any) => o.id === disputeForm.orderId);
+    if (!order) { setSubmittingDispute(false); return; }
+    const { error } = await (supabase as any).from("disputes").insert({
+      order_id: disputeForm.orderId,
+      buyer_id: user.id,
+      seller_id: order.seller_id || order.order_items?.[0]?.seller_id,
+      reason: disputeForm.reason,
+      description: disputeForm.description,
+    });
+    setSubmittingDispute(false);
+    if (error) { toast.error(error.message); return; }
+    setFiledDisputes((prev) => new Set([...prev, disputeForm.orderId]));
+    setDisputeForm(null);
+    toast.success("Dispute filed — admin will review shortly");
   };
 
   const renderOrderCard = (o: any, opts: { expandable?: boolean } = { expandable: true }) => {
@@ -319,6 +342,55 @@ const Orders = () => {
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Request Return / Refund
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Dispute Resolution */}
+        {["confirmed","processing","shipped","delivered"].includes(o.status) && opts.expandable && (
+          <div className="mt-2 pt-2 border-t">
+            {filedDisputes.has(o.id) ? (
+              <div className="flex items-center gap-2 text-sm text-orange-600 dark:text-orange-400">
+                <span>⚖️</span>
+                Dispute submitted — under admin review.
+              </div>
+            ) : disputeForm?.orderId === o.id ? (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">File a Dispute</p>
+                <select
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                  value={disputeForm.reason}
+                  onChange={(e) => setDisputeForm({ ...disputeForm, reason: e.target.value })}
+                >
+                  <option value="">Select reason…</option>
+                  <option value="Item not received">Item not received</option>
+                  <option value="Item not as described">Item not as described</option>
+                  <option value="Damaged / defective item">Damaged / defective item</option>
+                  <option value="Wrong item received">Wrong item received</option>
+                  <option value="Counterfeit product">Counterfeit product</option>
+                  <option value="Other">Other</option>
+                </select>
+                <Textarea
+                  placeholder="Describe the issue in detail…"
+                  value={disputeForm.description}
+                  onChange={(e) => setDisputeForm({ ...disputeForm, description: e.target.value })}
+                  rows={3}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={submitDispute} disabled={submittingDispute} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    {submittingDispute ? "Submitting…" : "Submit Dispute"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setDisputeForm(null)}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="sm" variant="ghost"
+                className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-500/10 text-xs"
+                onClick={() => setDisputeForm({ orderId: o.id, reason: "", description: "" })}
+              >
+                ⚖️ File a Dispute
               </Button>
             )}
           </div>

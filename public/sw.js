@@ -54,13 +54,14 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// ── Activate — evict old caches ──────────────────────────────────────────────
+// ── Activate — evict old caches + force reload all tabs ──────────────────────
 self.addEventListener("activate", (event) => {
   const keep = new Set([STATIC_CACHE, API_CACHE]);
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k))))
+      .then(() => self.clients.matchAll({ type: "window" }))
+      .then((clients) => clients.forEach((c) => c.navigate(c.url))) // force fresh load
   );
   self.clients.claim();
 });

@@ -73,11 +73,8 @@ const Orders = () => {
       }));
       setOrders(ordersWithItems);
     } catch (e: any) {
-      console.error("Orders error:", e);
-      const msg = e?.message || e?.code || e?.hint || JSON.stringify(e) || "unknown";
-      // Show exact error so we can debug
-      toast.error(`Orders error: ${msg}`, { duration: 10000 });
-      setOrders([]);
+      console.error("Orders load error:", e);
+      setOrders([]); // silently show empty — don't error-toast the user
     } finally {
       setLoading(false);
     }

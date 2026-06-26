@@ -56,25 +56,28 @@ const Orders = () => {
 
   const loadOrders = async () => {
     if (!user) return;
-    // Try customer_id first, fall back to user_id
-    const { data: ords, error } = await (supabase as any)
-      .from("orders")
-      .select("*, order_items(*)")
-      .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("Orders error:", error);
-      // Try simple fallback query
-      const { data: fallback } = await (supabase as any)
+    try {
+      const { data: ords, error } = await (supabase as any)
         .from("orders")
         .select("*")
         .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
-      setOrders(fallback ?? []);
-    } else {
-      setOrders(ords ?? []);
+      if (error) throw error;
+      // For each order, fetch its items
+      const ordersWithItems = await Promise.all((ords ?? []).map(async (o: any) => {
+        const { data: items } = await (supabase as any)
+          .from("order_items")
+          .select("*")
+          .eq("order_id", o.id);
+        return { ...o, order_items: items ?? [] };
+      }));
+      setOrders(ordersWithItems);
+    } catch (e: any) {
+      console.error("Orders error:", e);
+      toast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const loadReturnRequests = async () => {

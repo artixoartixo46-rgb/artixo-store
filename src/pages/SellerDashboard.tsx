@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play, Wallet, TrendingUp, Banknote, ArrowDownToLine } from "lucide-react";
+import { Plus, Package, Trash2, Edit, Upload, ShoppingBag, MapPin, Phone, BarChart2, BadgeCheck, Clock, XCircle, CheckCircle2, Send, Star, User, ExternalLink, ImagePlus, Truck, Printer, Camera, X, Film, Play, Wallet, TrendingUp, Banknote, ArrowDownToLine, Wand2, Sparkles } from "lucide-react";
 import { sendPushToUser } from "@/hooks/usePushNotifications";
 import { generateShippingLabel } from "@/lib/generateShippingLabel";
 import { formatLKR } from "@/lib/format";
@@ -70,6 +70,8 @@ const SellerDashboard = () => {
   const [form, setForm] = useState(emptyForm);
   const [uploading, setUploading] = useState(false);
   const [removingBg, setRemovingBg] = useState<number | null>(null);
+  const [rewritingTitle, setRewritingTitle] = useState(false);
+  const [enhancingImg, setEnhancingImg] = useState<number | null>(null);
   const [videoUploading, setVideoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
@@ -603,6 +605,80 @@ const SellerDashboard = () => {
       toast.error("BG removal failed: " + (e?.message ?? "unknown error"));
     } finally {
       setRemovingBg(null);
+    }
+  };
+
+  /* ── AI Title Rewriter ─────────────────────────────────────────────── */
+  const handleRewriteTitle = async () => {
+    if (!form.name.trim()) { toast.error("Enter a product name first"); return; }
+    setRewritingTitle(true);
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      if (!apiKey) { toast.error("Gemini API key not set"); return; }
+      const prompt = `You are an expert e-commerce copywriter for a Sri Lankan online marketplace called ARTIXO.
+Rewrite this product title to be more compelling, SEO-friendly, and buyer-focused.
+Keep it under 80 characters. Return ONLY the rewritten title, nothing else.
+Original title: "${form.name}"
+Category: "${form.category_id || "general"}"
+Brand: "${form.brand || ""}"`;
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      });
+      const data = await res.json();
+      const newTitle = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (newTitle) {
+        setForm((f) => ({ ...f, name: newTitle }));
+        toast.success("✍️ Title rewritten by AI!");
+      } else {
+        toast.error("AI didn't return a title. Try again.");
+      }
+    } catch (e: any) {
+      toast.error("AI rewrite failed: " + (e?.message ?? "unknown"));
+    } finally {
+      setRewritingTitle(false);
+    }
+  };
+
+  /* ── AI Image Enhancer ─────────────────────────────────────────────── */
+  const handleEnhanceImage = async (imgUrl: string, imgIndex: number) => {
+    setEnhancingImg(imgIndex);
+    toast.info("Enhancing image…");
+    try {
+      // Load image into canvas, apply brightness/contrast/saturation boost
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = imgUrl;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      // Draw with brightness + contrast filter
+      ctx.filter = "brightness(1.12) contrast(1.10) saturate(1.15)";
+      ctx.drawImage(img, 0, 0);
+      // Convert to blob and upload
+      const blob = await new Promise<Blob>((res) => canvas.toBlob((b) => res(b!), "image/jpeg", 0.92));
+      if (!user) return;
+      const path = `${user.id}/${Date.now()}-enhanced.jpg`;
+      const { error } = await supabase.storage.from("product-images").upload(path, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) { toast.error(error.message); return; }
+      const { data: pub } = supabase.storage.from("product-images").getPublicUrl(path);
+      const newUrl = pub.publicUrl;
+      setForm((f) => ({
+        ...f,
+        images: f.images.map((u, i) => i === imgIndex ? newUrl : u),
+        image_url: f.image_url === imgUrl ? newUrl : f.image_url,
+      }));
+      toast.success("✨ Image enhanced!");
+    } catch (e: any) {
+      toast.error("Enhancement failed: " + (e?.message ?? "unknown"));
+    } finally {
+      setEnhancingImg(null);
     }
   };
 
@@ -1282,7 +1358,16 @@ const SellerDashboard = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
           <form onSubmit={save} className="space-y-4">
-            <div><Label>Product Name *</Label><Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label>Product Name *</Label>
+                <Button type="button" size="sm" variant="outline" onClick={handleRewriteTitle} disabled={rewritingTitle || !form.name.trim()} className="h-7 gap-1.5 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20">
+                  {rewritingTitle ? <span className="animate-spin">⏳</span> : <Wand2 className="h-3 w-3" />}
+                  {rewritingTitle ? "Rewriting…" : "AI Rewrite"}
+                </Button>
+              </div>
+              <Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter product name…" />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Brand</Label><Input maxLength={60} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} /></div>
               <div><Label>SKU</Label><Input maxLength={60} value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} /></div>
@@ -1436,6 +1521,17 @@ const SellerDashboard = () => {
                         style={{ fontSize: "8px" }}
                       >
                         {removingBg === i ? "…" : "✨BG"}
+                      </button>
+                      {/* Enhance image button */}
+                      <button
+                        type="button"
+                        title="Enhance image (AI)"
+                        onClick={() => handleEnhanceImage(url, i)}
+                        disabled={enhancingImg !== null}
+                        className="absolute bottom-0.5 right-0.5 bg-amber-500/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth text-[8px] font-bold leading-none px-1"
+                        style={{ fontSize: "8px" }}
+                      >
+                        {enhancingImg === i ? "…" : "🌟"}
                       </button>
                       {/* Delete button */}
                       <button

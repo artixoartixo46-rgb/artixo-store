@@ -36,11 +36,19 @@
     <!-- Force-clear old service worker caches on every load -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(reg) { reg.unregister(); });
-        });
-        caches.keys().then(function(keys) {
-          keys.forEach(function(k) { caches.delete(k); });
+        Promise.all([
+          navigator.serviceWorker.getRegistrations().then(function(regs){
+            return Promise.all(regs.map(function(r){ return r.unregister(); }));
+          }),
+          caches.keys().then(function(keys){
+            return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+          })
+        ]).then(function(){
+          // One-shot forced reload to escape stale bundle (guarded by sessionStorage)
+          if (!sessionStorage.getItem('sw_purge_done_v5')) {
+            sessionStorage.setItem('sw_purge_done_v5', '1');
+            window.location.reload();
+          }
         });
       }
     </script>

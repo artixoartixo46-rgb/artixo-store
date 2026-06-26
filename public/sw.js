@@ -5,8 +5,8 @@
 //   3. Supabase public REST GET → Stale-while-revalidate (5-30 min TTL)
 //   4. Auth / mutations / realtime / storage → Network-only (never cache)
 
-const STATIC_CACHE  = "artixo-static-v4";
-const API_CACHE     = "artixo-api-v4";
+const STATIC_CACHE  = "artixo-static-v5";
+const API_CACHE     = "artixo-api-v5";
 
 // Public Supabase endpoints we are allowed to cache (read-only, not user-specific)
 const CACHEABLE_API = [
@@ -35,7 +35,7 @@ function getTTL(pathname) {
 
 function isCacheableSupabase(url, method) {
   if (method !== "GET") return false;
-  if (url.hostname !== "djmrevzcetdpjzbggavj.supabase.co") return false;
+  if (url.hostname !== "qzhcxtqkdcygzadcttyf.supabase.co") return false;
   // Never cache auth, realtime, storage, functions
   if (url.pathname.startsWith("/auth/"))      return false;
   if (url.pathname.startsWith("/realtime/"))  return false;

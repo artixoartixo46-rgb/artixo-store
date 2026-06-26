@@ -60,7 +60,7 @@ const Orders = () => {
       const { data: ords, error } = await (supabase as any)
         .from("orders")
         .select("*")
-        .eq("customer_id", user.id)
+        .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`)
         .order("created_at", { ascending: false });
       if (error) throw error;
       // For each order, fetch its items
@@ -85,7 +85,7 @@ const Orders = () => {
     const { data } = await supabase
       .from("return_requests")
       .select("order_id")
-      .eq("customer_id", user.id);
+      .or(`customer_id.eq.${user.id},user_id.eq.${user.id}`);
     if (data) {
       setReturnedOrders(new Set(data.map((r: any) => r.order_id)));
     }

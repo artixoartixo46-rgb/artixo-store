@@ -140,10 +140,10 @@ const Orders = () => {
     if (!id) return;
     setTracking(true);
     setTracked(null);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("orders")
-      .select("*, order_items(*, product:products(image_url, images, is_digital, digital_file_url, name))")
-      .or(`id.eq.${id},id.ilike.${id}%`)
+      .select("*")
+      .or(`id.eq.${id},order_number.ilike.${id}%`)
       .limit(1)
       .maybeSingle();
     setTracking(false);
@@ -151,7 +151,12 @@ const Orders = () => {
       toast.error("Order not found");
       return;
     }
-    setTracked(data);
+    // Fetch items separately — avoid nested join RLS recursion
+    const { data: items } = await (supabase as any)
+      .from("order_items")
+      .select("*")
+      .eq("order_id", data.id);
+    setTracked({ ...data, order_items: items ?? [] });
   };
 
   const submitReturn = async () => {

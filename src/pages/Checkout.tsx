@@ -213,17 +213,12 @@ const Checkout = () => {
       .from("orders")
       .insert({
         customer_id: user.id,
-        user_id: user.id,
         total_amount: total,
-        total,                                                // NOT NULL legacy
-        subtotal: total,                                      // NOT NULL legacy
-        order_number: `ART-${Date.now()}`,                   // NOT NULL legacy
         payment_method: paymentMethod === "cod" ? "cod" : "bank_transfer",
         shipping_address: shippingAddressText,
         shipping_phone: form.phone,
         notes: [form.notes, paymentIntentId ? `Payment: ${paymentIntentId}` : ""].filter(Boolean).join(" | ") || null,
         status: paymentIntentId ? "confirmed" : "pending",
-        order_status: paymentIntentId ? "confirmed" : "pending",
       })
       .select()
       .single();

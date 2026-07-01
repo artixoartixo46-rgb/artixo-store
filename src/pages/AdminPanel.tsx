@@ -268,7 +268,7 @@ const AdminPanel = () => {
   const updateOrderStatus = async (id: string, status: string) => {
     // Check current status before updating (to avoid double-crediting)
     const currentOrder = orders.find((o) => o.id === id);
-    const { error } = await supabase.from("orders").update({ status: status as any, order_status: status as any }).eq("id", id);
+    const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Order ${status}`);
 

@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
+    "@rollup/rollup-linux-x64-musl": "^4.62.2"
+  },
   "scripts": {
     "predev": "npx tsx scripts/generate-sitemap.ts",
     "dev": "vite",

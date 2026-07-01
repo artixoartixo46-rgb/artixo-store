@@ -218,15 +218,6 @@ const Checkout = () => {
         total,                                                // NOT NULL legacy
         subtotal: total,                                      // NOT NULL legacy
         order_number: `ART-${Date.now()}`,                   // NOT NULL legacy
-        address_snapshot: {                                   // NOT NULL legacy jsonb
-          name: form.name,
-          phone: form.phone,
-          address: form.address,
-          city: form.city,
-          district: form.district,
-          postal_code: form.postalCode,
-          email: form.email,
-        },
         payment_method: paymentMethod === "cod" ? "cod" : "bank_transfer",
         shipping_address: shippingAddressText,
         shipping_phone: form.phone,

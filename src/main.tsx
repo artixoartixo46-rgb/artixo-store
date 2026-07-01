@@ -14,10 +14,19 @@ installGlobalErrorHandlers();
 
 // Register service worker for PWA
 if ("serviceWorker" in navigator) {
+  // When a new SW takes control (after activate + claim), reload to get fresh JS
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
+
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js", { updateViaCache: "none" })
-      .then((reg) => console.log("[SW] Registered:", reg.scope))
+      .then((reg) => {
+        console.log("[SW] Registered:", reg.scope);
+        // Force-check for updates immediately
+        reg.update();
+      })
       .catch((err) => console.warn("[SW] Registration failed:", err));
   });
 }

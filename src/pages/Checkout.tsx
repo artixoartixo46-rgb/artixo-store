@@ -213,15 +213,26 @@ const Checkout = () => {
       .from("orders")
       .insert({
         customer_id: user.id,
-        user_id: user.id,             // RLS INSERT policy checks user_id
+        user_id: user.id,
         total_amount: total,
-        total,                        // NOT NULL legacy column — keep in sync
+        total,                                                // NOT NULL legacy
+        subtotal: total,                                      // NOT NULL legacy
+        order_number: `ART-${Date.now()}`,                   // NOT NULL legacy
+        address_snapshot: {                                   // NOT NULL legacy jsonb
+          name: form.name,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+          district: form.district,
+          postal_code: form.postalCode,
+          email: form.email,
+        },
         payment_method: paymentMethod === "cod" ? "cod" : "bank_transfer",
         shipping_address: shippingAddressText,
         shipping_phone: form.phone,
         notes: [form.notes, paymentIntentId ? `Payment: ${paymentIntentId}` : ""].filter(Boolean).join(" | ") || null,
         status: paymentIntentId ? "confirmed" : "pending",
-        order_status: paymentIntentId ? "confirmed" : "pending",   // keep legacy column in sync
+        order_status: paymentIntentId ? "confirmed" : "pending",
       })
       .select()
       .single();
@@ -299,7 +310,8 @@ const Checkout = () => {
       toast.success("🎉 Order placed! Cash on delivery confirmed.");
       navigate("/orders");
     } catch (err: any) {
-      toast.error("Failed to place order. Please try again.");
+      console.error("COD order error:", err);
+      toast.error(err?.message ? `Order failed: ${err.message}` : "Failed to place order. Please try again.");
     } finally {
       setLoading(false);
     }

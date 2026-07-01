@@ -1,5 +1,6 @@
 {
-  "installCommand": "npm cache clean --force && rm -rf node_modules && npm install --legacy-peer-deps",
+  "buildCommand": "vite build",
+  "installCommand": "npm install --legacy-peer-deps",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]

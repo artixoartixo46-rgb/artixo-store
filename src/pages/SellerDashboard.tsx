@@ -587,7 +587,8 @@ const SellerDashboard = () => {
     setRemovingBg(imgIndex);
     try {
       toast.info("Removing background… this may take a few seconds");
-      const { removeBackground } = await import("@imgly/background-removal");
+      // Load via CDN to avoid bundling 89 MB of onnxruntime-web WASM in the build
+      const { removeBackground } = await import(/* @vite-ignore */ "https://esm.sh/@imgly/background-removal@1.7.0");
       const blob = await removeBackground(imgUrl);
       // Upload the result
       const path = `${user.id}/${Date.now()}-nobg.png`;

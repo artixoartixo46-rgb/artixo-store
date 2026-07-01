@@ -213,12 +213,15 @@ const Checkout = () => {
       .from("orders")
       .insert({
         customer_id: user.id,
+        user_id: user.id,             // RLS INSERT policy checks user_id
         total_amount: total,
+        total,                        // NOT NULL legacy column — keep in sync
         payment_method: paymentMethod === "cod" ? "cod" : "bank_transfer",
         shipping_address: shippingAddressText,
         shipping_phone: form.phone,
         notes: [form.notes, paymentIntentId ? `Payment: ${paymentIntentId}` : ""].filter(Boolean).join(" | ") || null,
         status: paymentIntentId ? "confirmed" : "pending",
+        order_status: paymentIntentId ? "confirmed" : "pending",   // keep legacy column in sync
       })
       .select()
       .single();

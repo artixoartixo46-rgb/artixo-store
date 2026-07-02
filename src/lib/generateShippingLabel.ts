@@ -80,10 +80,10 @@ export function generateShippingLabel(opts: {
   }
   .print-bar { display:flex; gap:12px; margin-bottom:24px; align-items:center; }
   .btn-print {
-    background:#F97316; color:white; border:none;
+    background:#10B981; color:white; border:none;
     padding:12px 32px; font-size:15px; font-weight:700;
     border-radius:10px; cursor:pointer; font-family:'Inter',sans-serif;
-    letter-spacing:.5px; box-shadow:0 4px 14px rgba(249,115,22,.4);
+    letter-spacing:.5px; box-shadow:0 4px 14px rgba(16,185,129,.4);
   }
   .btn-close {
     background:#fff; color:#374151; border:1px solid #d1d5db;
@@ -96,21 +96,21 @@ export function generateShippingLabel(opts: {
   }
   /* Header */
   .header {
-    background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+    background:linear-gradient(135deg,#064E3B 0%,#065F46 100%);
     padding:10px 14px 10px;
     display:flex; justify-content:space-between; align-items:center;
   }
   .brand-logo { height:38px; width:auto; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
   .brand-fallback { font-size:22px; font-weight:900; color:#fff; letter-spacing:-1px; line-height:1; }
   .tagline { font-size:7px; color:rgba(255,255,255,.6); margin-top:2px; font-weight:500; text-transform:uppercase; letter-spacing:1.5px; }
-  .label-type { font-size:9px; font-weight:800; color:#F97316; letter-spacing:2px; text-transform:uppercase; text-align:right; }
+  .label-type { font-size:9px; font-weight:800; color:#10B981; letter-spacing:2px; text-transform:uppercase; text-align:right; }
   .label-date { font-size:7px; color:rgba(255,255,255,.5); margin-top:2px; text-align:right; }
   /* Status strip */
   .status-strip {
     background:#1f2937; display:flex; justify-content:space-between;
     align-items:center; padding:5px 14px;
   }
-  .status-badge { font-size:8px; font-weight:800; letter-spacing:1.5px; color:#F97316; text-transform:uppercase; }
+  .status-badge { font-size:8px; font-weight:800; letter-spacing:1.5px; color:#10B981; text-transform:uppercase; }
   .order-ref { font-family:'Roboto Mono',monospace; font-size:9px; font-weight:700; color:#fff; letter-spacing:1px; }
   /* Body */
   .body { padding:10px 12px; }
@@ -127,10 +127,10 @@ export function generateShippingLabel(opts: {
   .address-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
   .addr-box { border-radius:8px; padding:8px 9px; }
   .addr-box.from { background:#f3f4f6; border:1px solid #e5e7eb; }
-  .addr-box.to { background:#fff7ed; border:1.5px solid #F97316; }
+  .addr-box.to { background:#f0fdf4; border:1.5px solid #10B981; }
   .addr-label { font-size:6px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
   .from-label { color:#6b7280; }
-  .to-label { color:#F97316; }
+  .to-label { color:#10B981; }
   .addr-name { font-size:8.5px; font-weight:700; color:#111827; line-height:1.35; margin-bottom:3px; }
   .addr-detail { font-size:7px; color:#374151; line-height:1.5; }
   .addr-phone { font-size:8px; font-weight:600; color:#111827; margin-top:4px; font-family:'Roboto Mono',monospace; }
@@ -154,7 +154,7 @@ export function generateShippingLabel(opts: {
     display:flex; justify-content:space-between; align-items:center; margin-top:8px;
   }
   .total-label { font-size:7px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:1px; }
-  .total-amount { font-size:14px; font-weight:900; color:#F97316; font-family:'Roboto Mono',monospace; }
+  .total-amount { font-size:14px; font-weight:900; color:#10B981; font-family:'Roboto Mono',monospace; }
   .payment-chip { font-size:6.5px; font-weight:700; color:#fff; background:#374151; border-radius:4px; padding:3px 7px; letter-spacing:.5px; }
   /* Tracking */
   .tracking-box {
@@ -164,15 +164,15 @@ export function generateShippingLabel(opts: {
   }
   .tracking-courier { font-size:7px; font-weight:800; color:#6b7280; letter-spacing:1px; text-transform:uppercase; }
   .tracking-number { font-family:'Roboto Mono',monospace; font-size:9px; font-weight:700; color:#111827; margin-top:1px; }
-  .tracking-chip { font-size:6px; font-weight:700; color:#F97316; border:1px solid #F97316; border-radius:4px; padding:2px 6px; letter-spacing:.5px; }
+  .tracking-chip { font-size:6px; font-weight:700; color:#10B981; border:1px solid #10B981; border-radius:4px; padding:2px 6px; letter-spacing:.5px; }
   /* Footer */
   .footer {
-    background:linear-gradient(135deg,#1f2937 0%,#111827 100%);
+    background:linear-gradient(135deg,#022c22 0%,#064E3B 100%);
     padding:7px 14px; display:flex; justify-content:space-between;
     align-items:center; margin-top:10px;
   }
   .footer-left { font-size:6px; color:#6b7280; letter-spacing:.5px; }
-  .footer-right { font-size:6px; color:#F97316; font-weight:600; }
+  .footer-right { font-size:6px; color:#10B981; font-weight:600; }
   /* Print */
   @media print {
     body { background:white; padding:0; }

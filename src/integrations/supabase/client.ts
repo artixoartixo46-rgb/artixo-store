@@ -2,9 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Hardcoded to correct project — bypasses any stale Vercel env vars
-const SUPABASE_URL = "https://qzhcxtqkdcygzadcttyf.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F-g0yqW4X3JygjjF0rmJ2w_r0FRioJy";
+// Original project — djmrevzcetdpjzbggavj (user's real data: 26 products, orders, accounts)
+const SUPABASE_URL = "https://djmrevzcetdpjzbggavj.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbXJldnpjZXRkcGp6YmdnYXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk5NjIsImV4cCI6MjA5NjU3NTk2Mn0.QxA_F92I9otKySh_eSGdHY-8Nwm9ZqRmgL4nas00ifE";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

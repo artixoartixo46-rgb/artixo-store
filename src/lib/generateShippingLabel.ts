@@ -96,14 +96,15 @@ export function generateShippingLabel(opts: {
   }
   /* Header */
   .header {
-    background:linear-gradient(135deg,#F97316 0%,#EA580C 100%);
-    padding:12px 14px 10px;
-    display:flex; justify-content:space-between; align-items:flex-start;
+    background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+    padding:10px 14px 10px;
+    display:flex; justify-content:space-between; align-items:center;
   }
-  .brand { font-size:22px; font-weight:900; color:#fff; letter-spacing:-1px; line-height:1; }
-  .tagline { font-size:7px; color:rgba(255,255,255,.75); margin-top:2px; font-weight:500; text-transform:uppercase; letter-spacing:1.5px; }
-  .label-type { font-size:9px; font-weight:800; color:rgba(255,255,255,.9); letter-spacing:2px; text-transform:uppercase; text-align:right; }
-  .label-date { font-size:7px; color:rgba(255,255,255,.65); margin-top:2px; text-align:right; }
+  .brand-logo { height:38px; width:auto; object-fit:contain; filter:drop-shadow(0 2px 4px rgba(0,0,0,.3)); }
+  .brand-fallback { font-size:22px; font-weight:900; color:#fff; letter-spacing:-1px; line-height:1; }
+  .tagline { font-size:7px; color:rgba(255,255,255,.6); margin-top:2px; font-weight:500; text-transform:uppercase; letter-spacing:1.5px; }
+  .label-type { font-size:9px; font-weight:800; color:#F97316; letter-spacing:2px; text-transform:uppercase; text-align:right; }
+  .label-date { font-size:7px; color:rgba(255,255,255,.5); margin-top:2px; text-align:right; }
   /* Status strip */
   .status-strip {
     background:#1f2937; display:flex; justify-content:space-between;
@@ -189,7 +190,11 @@ export function generateShippingLabel(opts: {
 <div class="label">
   <div class="header">
     <div>
-      <div class="brand">ARTIXO</div>
+      <img class="brand-logo"
+           src="https://artixo-store-8phu.vercel.app/artixo-logo.png"
+           alt="ARTIXO"
+           onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+      <span class="brand-fallback" style="display:none">ARTIXO</span>
       <div class="tagline">Sri Lanka's Marketplace</div>
     </div>
     <div>

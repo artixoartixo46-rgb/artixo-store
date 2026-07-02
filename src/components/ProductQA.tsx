@@ -53,31 +53,51 @@ export const ProductQA = ({ productId, sellerId }: Props) => {
   const load = async () => {
     setLoading(true);
 
-    // Fetch questions with asker profile (table may not exist yet)
+    // Fetch questions (no FK join — profiles fetched separately)
     const qRes = await (supabase as any)
       .from("product_questions")
-      .select("id, question, created_at, user_id, profiles:user_id(full_name, shop_name)")
+      .select("id, question, created_at, user_id")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
 
     if (qRes.error || !qRes.data) { setLoading(false); return; }
     const qs = qRes.data;
 
-    // Fetch answers with seller profile
+    // Fetch asker profiles
+    const askerIds = [...new Set(qs.map((q: any) => q.user_id).filter(Boolean))];
+    let askerMap: Record<string, any> = {};
+    if (askerIds.length > 0) {
+      const { data: askers } = await (supabase as any)
+        .from("profiles").select("id, full_name, shop_name").in("id", askerIds);
+      for (const p of askers ?? []) askerMap[p.id] = p;
+    }
+
+    // Fetch answers (no FK join — profiles fetched separately)
     const qIds = qs.map((q: any) => q.id);
     let answersMap: Record<string, Answer> = {};
     if (qIds.length > 0) {
       const { data: ans } = await (supabase as any)
         .from("product_answers")
-        .select("id, question_id, answer, created_at, seller_id, profiles:seller_id(full_name, shop_name)")
+        .select("id, question_id, answer, created_at, seller_id")
         .in("question_id", qIds);
+
+      // Fetch seller profiles
+      const sellerIds = [...new Set((ans ?? []).map((a: any) => a.seller_id).filter(Boolean))];
+      let sellerMap: Record<string, any> = {};
+      if (sellerIds.length > 0) {
+        const { data: sellers } = await (supabase as any)
+          .from("profiles").select("id, full_name, shop_name").in("id", sellerIds);
+        for (const p of sellers ?? []) sellerMap[p.id] = p;
+      }
+
       for (const a of ans ?? []) {
+        const sp = sellerMap[a.seller_id];
         answersMap[a.question_id] = {
           id: a.id,
           answer: a.answer,
           created_at: a.created_at,
           seller_id: a.seller_id,
-          sellerName: a.profiles?.shop_name || a.profiles?.full_name || "Seller",
+          sellerName: sp?.shop_name || sp?.full_name || "Seller",
         };
       }
     }
@@ -87,7 +107,7 @@ export const ProductQA = ({ productId, sellerId }: Props) => {
       question: q.question,
       created_at: q.created_at,
       user_id: q.user_id,
-      askerName: q.profiles?.full_name || "Customer",
+      askerName: askerMap[q.user_id]?.full_name || "Customer",
       answer: answersMap[q.id] ?? null,
     })));
     setLoading(false);

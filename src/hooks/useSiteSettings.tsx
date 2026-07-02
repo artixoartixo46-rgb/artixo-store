@@ -178,14 +178,35 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const load = async () => {
     try {
-      const { data, error } = await (supabase as any).from("site_settings").select("key, value");
+      const { data, error } = await (supabase as any).from("site_settings").select("*");
       if (error) throw error;
       const map: Record<string, string> = {};
-      if (data) data.forEach((r: { key: string; value: string }) => { map[r.key] = r.value; });
+      if (data && data.length > 0) {
+        if ("key" in data[0]) {
+          // Key-value store format: [{key, value}, ...]
+          data.forEach((r: { key: string; value: string }) => { map[r.key] = r.value; });
+          setDbReady(true);
+        } else {
+          // Single-row named-columns format (legacy schema)
+          const r = data[0];
+          if (r.store_name)       map["site_name"]              = r.store_name;
+          if (r.tagline)          map["site_tagline"]            = r.tagline;
+          if (r.primary_color)    map["primary_color"]           = r.primary_color;
+          if (r.secondary_color)  map["secondary_color"]         = r.secondary_color;
+          if (r.accent_color)     map["accent_color"]            = r.accent_color;
+          if (r.logo_url)         map["site_logo"]               = r.logo_url;
+          if (r.maintenance_message) map["maintenance_message"]  = r.maintenance_message;
+          if (r.maintenance_mode !== undefined) map["maintenance_mode"] = String(r.maintenance_mode);
+          if (r.footer_text)      map["footer_copyright"]        = r.footer_text;
+          if (r.currency_symbol)  map["currency_symbol"]         = r.currency_symbol;
+          if (r.commission_rate !== undefined) map["default_commission_rate"] = String(r.commission_rate);
+          // legacy schema: don't mark dbReady (save uses key-value upsert which won't work)
+          setDbReady(false);
+        }
+      }
       const merged = { ...DEFAULT_SETTINGS, ...map } as SiteSettings;
       setSettings(merged);
       applyCSSVars(merged);
-      setDbReady(true);
     } catch {
       // Table doesn't exist yet — use defaults silently
       setDbReady(false);

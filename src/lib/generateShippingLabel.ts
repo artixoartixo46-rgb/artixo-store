@@ -1,4 +1,4 @@
-﻿/**
+﻿﻿/**
  * ARTIXO — Premium Shipping Label Generator v2
  * Opens a professional HTML label in a new tab with QR code + barcode.
  * Uses CDN libraries (no npm install needed).
@@ -179,6 +179,7 @@ export function generateShippingLabel(opts: {
     .print-bar { display:none; }
     .label { box-shadow:none; border-radius:0; width:105mm; margin:0 auto; }
     @page { size:A6; margin:4mm; }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; color-adjust:exact !important; }
   }
 </style>
 </head>

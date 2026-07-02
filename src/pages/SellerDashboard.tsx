@@ -81,6 +81,10 @@ const SellerDashboard = () => {
   const [trackingForm, setTrackingForm] = useState<{ orderId: string; courier: string; trackingNumber: string } | null>(null);
   const [trackingSaving, setTrackingSaving] = useState(false);
 
+  // Bulk Stock Editor state
+  const [bulkStockEdits, setBulkStockEdits] = useState<Record<string, { stock: string; threshold: string }>>({});
+  const [bulkStockSaving, setBulkStockSaving] = useState(false);
+
   // Verification state
   const [verif, setVerif] = useState<any>(null);
   const [verifLoading, setVerifLoading] = useState(true);
@@ -756,6 +760,45 @@ Brand: "${form.brand || ""}"`;
     if (error) { toast.error(error.message); return; }
     toast.success("Deleted"); refresh();
   };
+
+  /* ── Bulk Stock Editor ─────────────────────────────────────────────── */
+  const saveBulkStock = async () => {
+    if (!user) return;
+    setBulkStockSaving(true);
+    let successCount = 0;
+    let errorCount = 0;
+    for (const [productId, edits] of Object.entries(bulkStockEdits)) {
+      const product = products.find((p) => p.id === productId);
+      if (!product) continue;
+      const newStock = parseInt(edits.stock);
+      const newThreshold = parseInt(edits.threshold);
+      if (isNaN(newStock) || isNaN(newThreshold)) continue;
+      const oldStock = product.stock ?? 0;
+      const { error } = await (supabase as any)
+        .from("products")
+        .update({ stock: newStock, low_stock_threshold: newThreshold })
+        .eq("id", productId)
+        .eq("seller_id", user.id);
+      if (error) { errorCount++; continue; }
+      // Log stock history
+      await (supabase as any).from("stock_history").insert({
+        product_id: productId,
+        seller_id: user.id,
+        old_quantity: oldStock,
+        new_quantity: newStock,
+        reason: "Bulk stock edit",
+      });
+      successCount++;
+    }
+    setBulkStockSaving(false);
+    if (successCount > 0) {
+      toast.success(`✅ Updated stock for ${successCount} product${successCount > 1 ? "s" : ""}`);
+      setBulkStockEdits({});
+      refresh();
+    }
+    if (errorCount > 0) toast.error(`${errorCount} product(s) failed to update`);
+  };
+
   return (
     <div className="container py-5 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -804,6 +847,9 @@ Brand: "${form.brand || ""}"`;
             </TabsTrigger>
             <TabsTrigger value="shoppable" className="shrink-0">
               <span className="mr-1">📸</span> Shop the Look
+            </TabsTrigger>
+            <TabsTrigger value="stock" className="shrink-0">
+              <Package className="h-4 w-4 mr-1" /> Stock
             </TabsTrigger>
           </TabsList>
         </div>
@@ -1352,6 +1398,129 @@ Brand: "${form.brand || ""}"`;
 
         <TabsContent value="shoppable">
           <ShoppableTab sellerId={user.id} sellerProducts={products} />
+        </TabsContent>
+
+        {/* ── Bulk Stock Editor ── */}
+        <TabsContent value="stock">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">Bulk Stock Editor</h3>
+                <p className="text-sm text-muted-foreground">Update stock quantities and low-stock alerts for all products at once.</p>
+              </div>
+              <Button
+                onClick={saveBulkStock}
+                disabled={bulkStockSaving || Object.keys(bulkStockEdits).length === 0}
+                variant="hero"
+                size="sm"
+              >
+                {bulkStockSaving ? "Saving…" : `Save Changes (${Object.keys(bulkStockEdits).length})`}
+              </Button>
+            </div>
+
+            {products.length === 0 ? (
+              <Card className="p-12 text-center border-dashed">
+                <Package className="h-16 w-16 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">No products yet.</p>
+              </Card>
+            ) : (
+              <div className="rounded-xl border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-medium">Product</th>
+                      <th className="text-center px-3 py-3 font-medium w-32">Current Stock</th>
+                      <th className="text-center px-3 py-3 font-medium w-36">New Stock</th>
+                      <th className="text-center px-3 py-3 font-medium w-36">Low Stock Alert</th>
+                      <th className="text-center px-3 py-3 font-medium w-24">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {products.map((p) => {
+                      const edit = bulkStockEdits[p.id];
+                      const currentStock = p.stock ?? 0;
+                      const currentThreshold = (p as any).low_stock_threshold ?? 5;
+                      const newStockVal = edit ? parseInt(edit.stock) : currentStock;
+                      const isLow = newStockVal <= currentThreshold && newStockVal > 0;
+                      const isOut = newStockVal === 0;
+                      return (
+                        <tr key={p.id} className={edit ? "bg-yellow-50/40 dark:bg-yellow-900/10" : ""}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              {p.image_url && <img src={p.image_url} alt={p.name} className="h-9 w-9 rounded object-cover shrink-0" />}
+                              <div>
+                                <div className="font-medium line-clamp-1 max-w-[200px]">{p.name}</div>
+                                {p.sku && <div className="text-xs text-muted-foreground">SKU: {p.sku}</div>}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`font-mono font-semibold ${currentStock === 0 ? "text-destructive" : currentStock <= currentThreshold ? "text-orange-500" : "text-green-600"}`}>
+                              {currentStock}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="h-8 text-center w-full"
+                              placeholder={String(currentStock)}
+                              value={edit?.stock ?? ""}
+                              onChange={(e) => setBulkStockEdits((prev) => ({
+                                ...prev,
+                                [p.id]: { stock: e.target.value, threshold: prev[p.id]?.threshold ?? String(currentThreshold) }
+                              }))}
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              className="h-8 text-center w-full"
+                              placeholder={String(currentThreshold)}
+                              value={edit?.threshold ?? ""}
+                              onChange={(e) => setBulkStockEdits((prev) => ({
+                                ...prev,
+                                [p.id]: { stock: prev[p.id]?.stock ?? String(currentStock), threshold: e.target.value }
+                              }))}
+                            />
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            {isOut ? (
+                              <Badge className="bg-destructive text-destructive-foreground text-xs">Out of Stock</Badge>
+                            ) : isLow ? (
+                              <Badge className="bg-orange-100 text-orange-700 text-xs">Low Stock</Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-700 text-xs">In Stock</Badge>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Low stock summary */}
+            {products.some((p) => (p.stock ?? 0) <= ((p as any).low_stock_threshold ?? 5)) && (
+              <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-900/10">
+                <p className="text-sm font-semibold text-orange-700 mb-2">⚠️ Low / Out of Stock Products</p>
+                <div className="space-y-1">
+                  {products
+                    .filter((p) => (p.stock ?? 0) <= ((p as any).low_stock_threshold ?? 5))
+                    .map((p) => (
+                      <div key={p.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground line-clamp-1 max-w-[60%]">{p.name}</span>
+                        <span className={(p.stock ?? 0) === 0 ? "text-destructive font-semibold" : "text-orange-600 font-semibold"}>
+                          {(p.stock ?? 0) === 0 ? "OUT" : `${p.stock} left`}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 

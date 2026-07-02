@@ -188,12 +188,11 @@ export const SiteSettingsProvider = ({ children }: { children: ReactNode }) => {
           setDbReady(true);
         } else {
           // Single-row named-columns format (legacy schema)
+          // NOTE: Don't map colors from legacy DB — legacy DB may have non-ARTIXO colors.
+          // DEFAULT_SETTINGS colors (ARTIXO yellow/maroon) will be used instead.
           const r = data[0];
           if (r.store_name)       map["site_name"]              = r.store_name;
           if (r.tagline)          map["site_tagline"]            = r.tagline;
-          if (r.primary_color)    map["primary_color"]           = r.primary_color;
-          if (r.secondary_color)  map["secondary_color"]         = r.secondary_color;
-          if (r.accent_color)     map["accent_color"]            = r.accent_color;
           if (r.logo_url)         map["site_logo"]               = r.logo_url;
           if (r.maintenance_message) map["maintenance_message"]  = r.maintenance_message;
           if (r.maintenance_mode !== undefined) map["maintenance_mode"] = String(r.maintenance_mode);

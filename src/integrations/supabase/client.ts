@@ -2,10 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Live project: qzhcxtqkdcygzadcttyf
-// Fallbacks ensure correct project is used even if Vercel env vars are stale
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://qzhcxtqkdcygzadcttyf.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_F-g0yqW4X3JygjjF0rmJ2w_r0FRioJy";
+// Hardcoded to correct project — bypasses any stale Vercel env vars
+const SUPABASE_URL = "https://qzhcxtqkdcygzadcttyf.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_F-g0yqW4X3JygjjF0rmJ2w_r0FRioJy";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

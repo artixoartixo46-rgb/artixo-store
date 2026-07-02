@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+﻿﻿import { useEffect, useState, useRef } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -80,6 +80,10 @@ const SellerDashboard = () => {
   // Courier tracking state
   const [trackingForm, setTrackingForm] = useState<{ orderId: string; courier: string; trackingNumber: string } | null>(null);
   const [trackingSaving, setTrackingSaving] = useState(false);
+
+  // Proof of Delivery state
+  const [podModal, setPodModal] = useState<{ orderId: string; file: File | null; preview: string; notes: string; uploading: boolean } | null>(null);
+  const podInputRef = useRef<HTMLInputElement>(null);
 
   // Bulk Stock Editor state
   const [bulkStockEdits, setBulkStockEdits] = useState<Record<string, { stock: string; threshold: string }>>({});
@@ -177,7 +181,7 @@ const SellerDashboard = () => {
     if (!user) return;
     setProfileSaving(true);
     // banner_url is stored in Supabase Storage at a predictable path (no DB column needed)
-    // avatar_url IS a real DB column — save it
+    // avatar_url IS a real DB column â€” save it
     const payload: any = {
       shop_description: profileForm.bio || null,
       shop_name: profileForm.shop_name || null,
@@ -315,7 +319,7 @@ const SellerDashboard = () => {
     if (itemsError) { console.error("refreshOrders items:", itemsError); return; }
     if (!items || items.length === 0) { setOrders([]); return; }
 
-    // Step 2: fetch the corresponding orders by ID — use select("*") to handle any DB schema state
+    // Step 2: fetch the corresponding orders by ID â€” use select("*") to handle any DB schema state
     const orderIds = [...new Set(items.map((i: any) => i.order_id))];
     const { data: orderRows, error: ordersError } = await (supabase as any)
       .from("orders")
@@ -342,6 +346,36 @@ const SellerDashboard = () => {
     ));
   };
 
+  const submitPOD = async () => {
+    if (!podModal) return;
+    setPodModal(prev => prev ? { ...prev, uploading: true } : null);
+    let proofUrl = "";
+    if (podModal.file) {
+      const ext = podModal.file.name.split(".").pop();
+      const path = `pod/${podModal.orderId}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("delivery-proofs").upload(path, podModal.file, { upsert: true });
+      if (upErr) {
+        // fallback: try products bucket
+        const { error: upErr2, data: upData } = await supabase.storage.from("products").upload(path, podModal.file, { upsert: true });
+        if (!upErr2 && upData) {
+          const { data: urlData } = supabase.storage.from("products").getPublicUrl(path);
+          proofUrl = urlData.publicUrl;
+        }
+      } else {
+        const { data: urlData } = supabase.storage.from("delivery-proofs").getPublicUrl(path);
+        proofUrl = urlData.publicUrl;
+      }
+    }
+    const updatePayload: any = { status: "delivered", delivered_at: new Date().toISOString() };
+    if (proofUrl) updatePayload.delivery_proof_url = proofUrl;
+    if (podModal.notes) updatePayload.delivery_notes = podModal.notes;
+    const { error } = await supabase.from("orders").update(updatePayload).eq("id", podModal.orderId);
+    if (error) { toast.error(error.message); setPodModal(prev => prev ? { ...prev, uploading: false } : null); return; }
+    toast.success("Order marked as delivered" + (proofUrl ? " with proof photo" : ""));
+    setPodModal(null);
+    loadOrders();
+  };
+
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
     if (status === "shipped") {
       setTrackingForm({ orderId, courier: "DHL", trackingNumber: "" });
@@ -352,7 +386,7 @@ const SellerDashboard = () => {
     if (error) { toast.error(error.message); return; }
     toast.success(`Order marked as ${status}`);
 
-    // ── Commission credit on delivery ─────────────────────────────────────────
+    // â”€â”€ Commission credit on delivery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (status === "delivered" && ord?.status !== "delivered") {
       const myTotal = orders.find((o) => o.id === orderId)?.my_items
         ?.reduce((s: number, it: any) => s + Number(it.unitPrice) * it.quantity, 0) ?? 0;
@@ -366,7 +400,7 @@ const SellerDashboard = () => {
         setSellerBalance(newBalance);
         toast.success(`+${formatLKR(net)} credited to your earnings (${rate}% commission: ${formatLKR(commission)})`);
 
-        // ── Deduct commission from seller_wallets (deposit tier) ──────────────
+        // â”€â”€ Deduct commission from seller_wallets (deposit tier) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const walletTier = profile?.wallet_tier ?? "deposit";
         if (walletTier === "deposit") {
           const { data: wallet } = await (supabase as any)
@@ -398,13 +432,13 @@ const SellerDashboard = () => {
             });
 
             if (suspend) {
-              toast.error("⚠️ Commission wallet empty — products suspended. Please top up.", { duration: 6000 });
+              toast.error("âš ï¸ Commission wallet empty â€” products suspended. Please top up.", { duration: 6000 });
             } else if (newWalletBal < 400) {
               toast.warning(`Commission wallet low: Rs. ${Math.max(0, newWalletBal).toFixed(2)}. Top up soon.`, { duration: 5000 });
             }
           }
         } else {
-          // Invoice tier — just log the owed commission
+          // Invoice tier â€” just log the owed commission
           await (supabase as any).from("wallet_transactions").insert({
             seller_id: user!.id,
             type: "commission",
@@ -424,13 +458,13 @@ const SellerDashboard = () => {
     // Push notification to buyer
     if (ord?.customer_id) {
       const statusMsg: Record<string, string> = {
-        confirmed: "Your order has been confirmed! 🎉",
-        shipped: "Your order is on its way! 🚚",
-        delivered: "Your order has been delivered! ✅",
+        confirmed: "Your order has been confirmed! ðŸŽ‰",
+        shipped: "Your order is on its way! ðŸšš",
+        delivered: "Your order has been delivered! âœ…",
         cancelled: "Your order has been cancelled.",
       };
       sendPushToUser(ord.customer_id, {
-        title: "Order Update — ARTIXO",
+        title: "Order Update â€” ARTIXO",
         body: statusMsg[status] ?? `Order status: ${status}`,
         url: "/orders",
       }).catch(() => {});
@@ -441,7 +475,7 @@ const SellerDashboard = () => {
   const saveTrackingAndShip = async () => {
     if (!trackingForm) return;
     setTrackingSaving(true);
-    // Build update payload — only include tracking fields if they exist in DB (guarded by try)
+    // Build update payload â€” only include tracking fields if they exist in DB (guarded by try)
     const updatePayload: Record<string, unknown> = { status: "shipped" };
     if (trackingForm.courier) updatePayload.courier = trackingForm.courier;
     if (trackingForm.trackingNumber?.trim()) updatePayload.tracking_number = trackingForm.trackingNumber.trim();
@@ -468,7 +502,7 @@ const SellerDashboard = () => {
         { event: "INSERT", schema: "public", table: "order_items", filter: `seller_id=eq.${user.id}` },
         () => {
           refreshOrders();
-          toast.success("🛒 New order received!", { duration: 5000 });
+          toast.success("ðŸ›’ New order received!", { duration: 5000 });
         }
       )
       .on(
@@ -590,7 +624,7 @@ const SellerDashboard = () => {
     if (!user) return;
     setRemovingBg(imgIndex);
     try {
-      toast.info("Removing background… this may take a few seconds");
+      toast.info("Removing backgroundâ€¦ this may take a few seconds");
       // Load via CDN to avoid bundling 89 MB of onnxruntime-web WASM in the build
       const { removeBackground } = await import(/* @vite-ignore */ "https://esm.sh/@imgly/background-removal@1.7.0");
       const blob = await removeBackground(imgUrl);
@@ -605,7 +639,7 @@ const SellerDashboard = () => {
         images: f.images.map((u, i) => i === imgIndex ? newUrl : u),
         image_url: f.image_url === imgUrl ? newUrl : f.image_url,
       }));
-      toast.success("Background removed! ✨");
+      toast.success("Background removed! âœ¨");
     } catch (e: any) {
       toast.error("BG removal failed: " + (e?.message ?? "unknown error"));
     } finally {
@@ -613,7 +647,7 @@ const SellerDashboard = () => {
     }
   };
 
-  /* ── AI Title Rewriter ─────────────────────────────────────────────── */
+  /* â”€â”€ AI Title Rewriter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleRewriteTitle = async () => {
     if (!form.name.trim()) { toast.error("Enter a product name first"); return; }
     setRewritingTitle(true);
@@ -635,7 +669,7 @@ Brand: "${form.brand || ""}"`;
       const newTitle = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       if (newTitle) {
         setForm((f) => ({ ...f, name: newTitle }));
-        toast.success("✍️ Title rewritten by AI!");
+        toast.success("âœï¸ Title rewritten by AI!");
       } else {
         toast.error("AI didn't return a title. Try again.");
       }
@@ -646,10 +680,10 @@ Brand: "${form.brand || ""}"`;
     }
   };
 
-  /* ── AI Image Enhancer ─────────────────────────────────────────────── */
+  /* â”€â”€ AI Image Enhancer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const handleEnhanceImage = async (imgUrl: string, imgIndex: number) => {
     setEnhancingImg(imgIndex);
-    toast.info("Enhancing image…");
+    toast.info("Enhancing imageâ€¦");
     try {
       // Load image into canvas, apply brightness/contrast/saturation boost
       const img = new window.Image();
@@ -679,7 +713,7 @@ Brand: "${form.brand || ""}"`;
         images: f.images.map((u, i) => i === imgIndex ? newUrl : u),
         image_url: f.image_url === imgUrl ? newUrl : f.image_url,
       }));
-      toast.success("✨ Image enhanced!");
+      toast.success("âœ¨ Image enhanced!");
     } catch (e: any) {
       toast.error("Enhancement failed: " + (e?.message ?? "unknown"));
     } finally {
@@ -761,7 +795,7 @@ Brand: "${form.brand || ""}"`;
     toast.success("Deleted"); refresh();
   };
 
-  /* ── Bulk Stock Editor ─────────────────────────────────────────────── */
+  /* â”€â”€ Bulk Stock Editor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const saveBulkStock = async () => {
     if (!user) return;
     setBulkStockSaving(true);
@@ -792,7 +826,7 @@ Brand: "${form.brand || ""}"`;
     }
     setBulkStockSaving(false);
     if (successCount > 0) {
-      toast.success(`✅ Updated stock for ${successCount} product${successCount > 1 ? "s" : ""}`);
+      toast.success(`âœ… Updated stock for ${successCount} product${successCount > 1 ? "s" : ""}`);
       setBulkStockEdits({});
       refresh();
     }
@@ -843,10 +877,10 @@ Brand: "${form.brand || ""}"`;
               <Banknote className="h-4 w-4 mr-1" /> <span className="hidden sm:inline">Commission </span>Wallet
             </TabsTrigger>
             <TabsTrigger value="disputes" className="shrink-0">
-              <span className="mr-1">⚖️</span> Disputes
+              <span className="mr-1">âš–ï¸</span> Disputes
             </TabsTrigger>
             <TabsTrigger value="shoppable" className="shrink-0">
-              <span className="mr-1">📸</span> Shop the Look
+              <span className="mr-1">ðŸ“¸</span> Shop the Look
             </TabsTrigger>
             <TabsTrigger value="stock" className="shrink-0">
               <Package className="h-4 w-4 mr-1" /> Stock
@@ -978,7 +1012,7 @@ Brand: "${form.brand || ""}"`;
             </div>
 
             {verifLoading ? (
-              <Card className="p-6 text-center text-muted-foreground text-sm">Loading…</Card>
+              <Card className="p-6 text-center text-muted-foreground text-sm">Loadingâ€¦</Card>
             ) : verif?.status === "approved" ? (
               <Card className="p-6 border-blue-200 bg-blue-50/30 space-y-3">
                 <div className="flex items-center gap-3">
@@ -1051,11 +1085,11 @@ Brand: "${form.brand || ""}"`;
                   </div>
                   <div>
                     <Label>Additional Notes</Label>
-                    <Textarea placeholder="Any extra info you'd like us to know…" rows={2} value={verifForm.notes}
+                    <Textarea placeholder="Any extra info you'd like us to knowâ€¦" rows={2} value={verifForm.notes}
                       onChange={(e) => setVerifForm({ ...verifForm, notes: e.target.value })} />
                   </div>
                   <Button variant="hero" type="submit" disabled={verifSaving || !verifForm.business_name || !verifForm.business_type || !verifForm.phone}>
-                    {verifSaving ? "Submitting…" : <><Send className="h-4 w-4 mr-1.5" />{verif?.status === "rejected" ? "Resubmit Request" : "Submit Verification Request"}</>}
+                    {verifSaving ? "Submittingâ€¦" : <><Send className="h-4 w-4 mr-1.5" />{verif?.status === "rejected" ? "Resubmit Request" : "Submit Verification Request"}</>}
                   </Button>
                 </form>
               </Card>
@@ -1067,7 +1101,7 @@ Brand: "${form.brand || ""}"`;
           <div className="max-w-xl space-y-6">
             <p className="text-sm text-muted-foreground">This info is shown on your public storefront.</p>
 
-            {/* ── BANNER SECTION ── */}
+            {/* â”€â”€ BANNER SECTION â”€â”€ */}
             <div>
               <Label className="text-sm font-semibold mb-2 block">Shop Banner</Label>
               <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-primary/20 to-secondary/20 border border-border"
@@ -1091,7 +1125,7 @@ Brand: "${form.brand || ""}"`;
                     disabled={bannerUploading}
                   >
                     {bannerUploading ? (
-                      <><div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" /><span>Uploading…</span></>
+                      <><div className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" /><span>Uploadingâ€¦</span></>
                     ) : (
                       <><Camera className="h-3.5 w-3.5" />{profileForm.banner_url ? "Change Banner" : "Upload Banner"}</>
                     )}
@@ -1118,14 +1152,14 @@ Brand: "${form.brand || ""}"`;
                   onClick={() => bannerInputRef.current?.click()}
                   disabled={bannerUploading}
                 >
-                  {bannerUploading ? "Uploading…" : <><Camera className="h-3 w-3" />{profileForm.banner_url ? "Change" : "Upload"}</>}
+                  {bannerUploading ? "Uploadingâ€¦" : <><Camera className="h-3 w-3" />{profileForm.banner_url ? "Change" : "Upload"}</>}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5">Recommended: 1200×400px. JPG or PNG.</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Recommended: 1200Ã—400px. JPG or PNG.</p>
               <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={uploadBanner} />
             </div>
 
-            {/* ── AVATAR SECTION ── */}
+            {/* â”€â”€ AVATAR SECTION â”€â”€ */}
             <div>
               <Label className="text-sm font-semibold mb-2 block">Profile Photo</Label>
               <div className="flex items-center gap-5">
@@ -1164,7 +1198,7 @@ Brand: "${form.brand || ""}"`;
                     disabled={avatarUploading}
                   >
                     {avatarUploading ? (
-                      <><div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" /> Uploading…</>
+                      <><div className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" /> Uploadingâ€¦</>
                     ) : (
                       <><Camera className="h-4 w-4" /> Upload Photo</>
                     )}
@@ -1195,7 +1229,7 @@ Brand: "${form.brand || ""}"`;
 
             <Separator />
 
-            {/* ── PROFILE FORM ── */}
+            {/* â”€â”€ PROFILE FORM â”€â”€ */}
             <form onSubmit={saveProfile} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
@@ -1226,14 +1260,14 @@ Brand: "${form.brand || ""}"`;
                   maxLength={500}
                   value={profileForm.bio}
                   onChange={(e) => setProfileForm((f) => ({ ...f, bio: e.target.value }))}
-                  placeholder="Tell customers about your shop, what you sell, and what makes you unique…"
+                  placeholder="Tell customers about your shop, what you sell, and what makes you uniqueâ€¦"
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">{profileForm.bio.length}/500</p>
               </div>
               <div className="flex gap-2 pt-1">
                 <Button type="submit" variant="hero" disabled={profileSaving}>
-                  {profileSaving ? "Saving…" : "Save Profile"}
+                  {profileSaving ? "Savingâ€¦" : "Save Profile"}
                 </Button>
                 {user && (
                   <Button type="button" variant="outline" asChild>
@@ -1245,12 +1279,12 @@ Brand: "${form.brand || ""}"`;
               </div>
             </form>
 
-            {/* ── ID VERIFICATION ── */}
+            {/* â”€â”€ ID VERIFICATION â”€â”€ */}
             <SellerIdVerification userId={user?.id ?? ""} />
           </div>
         </TabsContent>
 
-        {/* ── EARNINGS TAB ─────────────────────────────────────────────────────── */}
+        {/* â”€â”€ EARNINGS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <TabsContent value="earnings">
           <div className="space-y-6 max-w-2xl">
             {/* Balance cards */}
@@ -1338,7 +1372,7 @@ Brand: "${form.brand || ""}"`;
                   disabled={submittingWithdrawal || sellerBalance <= 0}
                   className="w-full"
                 >
-                  {submittingWithdrawal ? "Submitting…" : <><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Request Withdrawal</>}
+                  {submittingWithdrawal ? "Submittingâ€¦" : <><ArrowDownToLine className="h-4 w-4 mr-1.5" /> Request Withdrawal</>}
                 </Button>
                 {sellerBalance <= 0 && (
                   <p className="text-xs text-muted-foreground text-center">No balance available. Mark delivered orders to earn.</p>
@@ -1355,7 +1389,7 @@ Brand: "${form.brand || ""}"`;
                     <div key={w.id} className="flex items-center justify-between gap-3 py-2 border-b last:border-0">
                       <div>
                         <div className="text-sm font-medium">{formatLKR(w.net_amount)}</div>
-                        <div className="text-xs text-muted-foreground">{w.bank_name} • {w.account_number}</div>
+                        <div className="text-xs text-muted-foreground">{w.bank_name} â€¢ {w.account_number}</div>
                         <div className="text-xs text-muted-foreground">{w.requested_at ? new Date(w.requested_at).toLocaleDateString("en-LK") : ""}</div>
                       </div>
                       <Badge
@@ -1375,7 +1409,7 @@ Brand: "${form.brand || ""}"`;
           </div>
         </TabsContent>
 
-        {/* ── COMMISSION WALLET TAB ──────────────────────────────────────────── */}
+        {/* â”€â”€ COMMISSION WALLET TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <TabsContent value="commission">
           <div className="max-w-lg">
             <div className="mb-4">
@@ -1400,7 +1434,7 @@ Brand: "${form.brand || ""}"`;
           <ShoppableTab sellerId={user.id} sellerProducts={products} />
         </TabsContent>
 
-        {/* ── Bulk Stock Editor ── */}
+        {/* â”€â”€ Bulk Stock Editor â”€â”€ */}
         <TabsContent value="stock">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -1414,7 +1448,7 @@ Brand: "${form.brand || ""}"`;
                 variant="hero"
                 size="sm"
               >
-                {bulkStockSaving ? "Saving…" : `Save Changes (${Object.keys(bulkStockEdits).length})`}
+                {bulkStockSaving ? "Savingâ€¦" : `Save Changes (${Object.keys(bulkStockEdits).length})`}
               </Button>
             </div>
 
@@ -1505,7 +1539,7 @@ Brand: "${form.brand || ""}"`;
             {/* Low stock summary */}
             {products.some((p) => (p.stock ?? 0) <= ((p as any).low_stock_threshold ?? 5)) && (
               <Card className="p-4 border-orange-200 bg-orange-50/50 dark:bg-orange-900/10">
-                <p className="text-sm font-semibold text-orange-700 mb-2">⚠️ Low / Out of Stock Products</p>
+                <p className="text-sm font-semibold text-orange-700 mb-2">âš ï¸ Low / Out of Stock Products</p>
                 <div className="space-y-1">
                   {products
                     .filter((p) => (p.stock ?? 0) <= ((p as any).low_stock_threshold ?? 5))
@@ -1532,11 +1566,11 @@ Brand: "${form.brand || ""}"`;
               <div className="flex items-center justify-between mb-1">
                 <Label>Product Name *</Label>
                 <Button type="button" size="sm" variant="outline" onClick={handleRewriteTitle} disabled={rewritingTitle || !form.name.trim()} className="h-7 gap-1.5 text-xs text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20">
-                  {rewritingTitle ? <span className="animate-spin">⏳</span> : <Wand2 className="h-3 w-3" />}
-                  {rewritingTitle ? "Rewriting…" : "AI Rewrite"}
+                  {rewritingTitle ? <span className="animate-spin">â³</span> : <Wand2 className="h-3 w-3" />}
+                  {rewritingTitle ? "Rewritingâ€¦" : "AI Rewrite"}
                 </Button>
               </div>
-              <Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter product name…" />
+              <Input required maxLength={150} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter product nameâ€¦" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Brand</Label><Input maxLength={60} value={form.brand} onChange={(e) => setForm({ ...form, brand: e.target.value })} /></div>
@@ -1549,23 +1583,23 @@ Brand: "${form.brand || ""}"`;
               <div><Label>Original Price</Label><Input type="number" min="0" step="0.01" placeholder="For discount" value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} /></div>
               <div><Label>Stock *</Label><Input required type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></div>
             </div>
-            {/* ── Listing Type ── */}
+            {/* â”€â”€ Listing Type â”€â”€ */}
             <div>
               <Label>Listing Type</Label>
               <Select value={form.listing_type} onValueChange={(v) => setForm({ ...form, listing_type: v as any })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sale">🛒 For Sale Only</SelectItem>
-                  <SelectItem value="rent">🔄 For Rent Only</SelectItem>
-                  <SelectItem value="both">🛒🔄 For Sale & Rent</SelectItem>
+                  <SelectItem value="sale">ðŸ›’ For Sale Only</SelectItem>
+                  <SelectItem value="rent">ðŸ”„ For Rent Only</SelectItem>
+                  <SelectItem value="both">ðŸ›’ðŸ”„ For Sale & Rent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* ── Rental pricing — shown only if listing_type includes rent ── */}
+            {/* â”€â”€ Rental pricing â€” shown only if listing_type includes rent â”€â”€ */}
             {(form.listing_type === "rent" || form.listing_type === "both") && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3 space-y-3">
-                <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">🔄 Rental Pricing</p>
+                <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">ðŸ”„ Rental Pricing</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label className="text-xs">Price / Day (LKR) *</Label><Input type="number" min="0" step="0.01" placeholder="e.g. 500" value={form.rent_price_per_day} onChange={(e) => setForm({ ...form, rent_price_per_day: e.target.value })} /></div>
                   <div><Label className="text-xs">Price / Week (LKR)</Label><Input type="number" min="0" step="0.01" placeholder="Optional discount" value={form.rent_price_per_week} onChange={(e) => setForm({ ...form, rent_price_per_week: e.target.value })} /></div>
@@ -1587,7 +1621,7 @@ Brand: "${form.brand || ""}"`;
             {/* Color Variants */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="font-semibold flex items-center gap-1.5">🎨 Color Variants <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <Label className="font-semibold flex items-center gap-1.5">ðŸŽ¨ Color Variants <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
                 <Button type="button" size="sm" variant="outline" onClick={addColor} className="h-7 text-xs gap-1">
                   <Plus className="h-3 w-3" /> Add Color
                 </Button>
@@ -1660,7 +1694,7 @@ Brand: "${form.brand || ""}"`;
                 <Label>Product Images</Label>
                 <span className="text-xs text-muted-foreground">{form.images.length} / 8</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-2">First image is the primary. Click ★ on any image to make it primary.</p>
+              <p className="text-xs text-muted-foreground mb-2">First image is the primary. Click â˜… on any image to make it primary.</p>
               {form.images.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   {form.images.map((url, i) => (
@@ -1690,7 +1724,7 @@ Brand: "${form.brand || ""}"`;
                         className="absolute bottom-0.5 left-0.5 bg-purple-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth text-[8px] font-bold leading-none px-1"
                         style={{ fontSize: "8px" }}
                       >
-                        {removingBg === i ? "…" : "✨BG"}
+                        {removingBg === i ? "â€¦" : "âœ¨BG"}
                       </button>
                       {/* Enhance image button */}
                       <button
@@ -1701,7 +1735,7 @@ Brand: "${form.brand || ""}"`;
                         className="absolute bottom-0.5 right-0.5 bg-amber-500/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-smooth text-[8px] font-bold leading-none px-1"
                         style={{ fontSize: "8px" }}
                       >
-                        {enhancingImg === i ? "…" : "🌟"}
+                        {enhancingImg === i ? "â€¦" : "ðŸŒŸ"}
                       </button>
                       {/* Delete button */}
                       <button
@@ -1733,7 +1767,7 @@ Brand: "${form.brand || ""}"`;
               )}
             </div>
 
-            {/* ── VIDEO SECTION ── */}
+            {/* â”€â”€ VIDEO SECTION â”€â”€ */}
             <Separator />
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -1770,7 +1804,7 @@ Brand: "${form.brand || ""}"`;
               {!form.video_url && (
                 <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-muted transition-smooth mb-2">
                   {videoUploading ? (
-                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading video…</span></>
+                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading videoâ€¦</span></>
                   ) : (
                     <><Play className="h-4 w-4 text-primary" /><span className="text-sm">Upload video file (MP4, MOV, WebM)</span></>
                   )}
@@ -1807,7 +1841,7 @@ Brand: "${form.brand || ""}"`;
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{form.model_url.split("/").pop()}</p>
-                    <p className="text-[10px] text-green-600">Uploaded ✓</p>
+                    <p className="text-[10px] text-green-600">Uploaded âœ“</p>
                   </div>
                   <button
                     type="button"
@@ -1820,9 +1854,9 @@ Brand: "${form.brand || ""}"`;
               ) : (
                 <label className="flex items-center justify-center gap-2 border-2 border-dashed rounded-xl p-4 cursor-pointer hover:bg-muted transition-smooth">
                   {uploading ? (
-                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading 3D model…</span></>
+                    <><div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" /><span className="text-sm">Uploading 3D modelâ€¦</span></>
                   ) : (
-                    <><span className="text-lg">📦</span><span className="text-sm">Upload .glb / .gltf file</span></>
+                    <><span className="text-lg">ðŸ“¦</span><span className="text-sm">Upload .glb / .gltf file</span></>
                   )}
                   <input type="file" accept=".glb,.gltf" className="hidden" onChange={handleModelUpload} disabled={uploading} />
                 </label>
@@ -1834,7 +1868,7 @@ Brand: "${form.brand || ""}"`;
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded bg-purple-500/10 flex items-center justify-center">
-                    <span className="text-[10px]">⬇️</span>
+                    <span className="text-[10px]">â¬‡ï¸</span>
                   </div>
                   <Label className="font-semibold text-sm">Digital Product</Label>
                 </div>
@@ -1849,15 +1883,15 @@ Brand: "${form.brand || ""}"`;
 
               {form.is_digital && (
                 <div className="space-y-2 pl-1">
-                  <p className="text-xs text-muted-foreground">Upload the file buyers will download after purchase (PDF, ZIP, MP3, PSD, etc. — max 100MB).</p>
+                  <p className="text-xs text-muted-foreground">Upload the file buyers will download after purchase (PDF, ZIP, MP3, PSD, etc. â€” max 100MB).</p>
                   {form.digital_file_url ? (
                     <div className="flex items-center gap-3 p-3 rounded-xl border bg-purple-500/5 border-purple-500/20">
                       <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                        <span className="text-lg">📁</span>
+                        <span className="text-lg">ðŸ“</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{form.digital_file_url.split("/").pop()}</p>
-                        <p className="text-[10px] text-green-600 font-medium">Uploaded ✓</p>
+                        <p className="text-[10px] text-green-600 font-medium">Uploaded âœ“</p>
                       </div>
                       <button
                         type="button"
@@ -1870,9 +1904,9 @@ Brand: "${form.brand || ""}"`;
                   ) : (
                     <label className="flex items-center justify-center gap-2 border-2 border-dashed border-purple-400/40 rounded-xl p-4 cursor-pointer hover:bg-purple-500/5 transition-smooth">
                       {uploading ? (
-                        <><div className="h-4 w-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" /><span className="text-sm">Uploading file…</span></>
+                        <><div className="h-4 w-4 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" /><span className="text-sm">Uploading fileâ€¦</span></>
                       ) : (
-                        <><span className="text-xl">📂</span><span className="text-sm text-muted-foreground">Upload digital file (PDF, ZIP, MP3, PSD…)</span></>
+                        <><span className="text-xl">ðŸ“‚</span><span className="text-sm text-muted-foreground">Upload digital file (PDF, ZIP, MP3, PSDâ€¦)</span></>
                       )}
                       <input type="file" accept=".pdf,.zip,.rar,.mp3,.wav,.psd,.ai,.epub,.docx,.xlsx,.png,.jpg" className="hidden" onChange={handleDigitalFileUpload} disabled={uploading} />
                     </label>
@@ -1887,13 +1921,13 @@ Brand: "${form.brand || ""}"`;
 
               {/* Authenticity */}
               <div>
-                <Label className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">🏷️ Product Authenticity</Label>
+                <Label className="text-sm font-semibold flex items-center gap-1.5 mb-1.5">ðŸ·ï¸ Product Authenticity</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "original", label: "✅ Original", desc: "Brand new, genuine" },
-                    { value: "replica", label: "🔄 Replica", desc: "Copy / imitation" },
-                    { value: "refurbished", label: "♻️ Refurbished", desc: "Renewed / used" },
-                    { value: "unspecified", label: "❓ Unspecified", desc: "Not disclosed" },
+                    { value: "original", label: "âœ… Original", desc: "Brand new, genuine" },
+                    { value: "replica", label: "ðŸ”„ Replica", desc: "Copy / imitation" },
+                    { value: "refurbished", label: "â™»ï¸ Refurbished", desc: "Renewed / used" },
+                    { value: "unspecified", label: "â“ Unspecified", desc: "Not disclosed" },
                   ].map((opt) => (
                     <button
                       key={opt.value}
@@ -1911,7 +1945,7 @@ Brand: "${form.brand || ""}"`;
               {/* Buyer Protection */}
               <div className="flex items-center justify-between p-3 rounded-xl border bg-green-500/5 border-green-500/20">
                 <div>
-                  <div className="flex items-center gap-1.5 text-sm font-semibold">🛡️ Offer Buyer Protection</div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold">ðŸ›¡ï¸ Offer Buyer Protection</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">Money-back guarantee shown on your listing</div>
                 </div>
                 <button
@@ -1932,7 +1966,7 @@ Brand: "${form.brand || ""}"`;
         </DialogContent>
       </Dialog>
 
-      {/* Courier Tracking Dialog — shown when seller selects "Shipped" */}
+      {/* Courier Tracking Dialog â€” shown when seller selects "Shipped" */}
       <Dialog open={!!trackingForm} onOpenChange={(o) => !o && setTrackingForm(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><Truck className="h-5 w-5 text-primary" />Enter Courier Tracking Info</DialogTitle></DialogHeader>
@@ -1964,7 +1998,66 @@ Brand: "${form.brand || ""}"`;
             <div className="flex gap-2 pt-1">
               <Button variant="outline" className="flex-1" onClick={() => setTrackingForm(null)}>Cancel</Button>
               <Button variant="hero" className="flex-1" disabled={trackingSaving} onClick={saveTrackingAndShip}>
-                {trackingSaving ? "Saving…" : <><Truck className="h-4 w-4 mr-1.5" />Mark as Shipped</>}
+                {trackingSaving ? "Savingâ€¦" : <><Truck className="h-4 w-4 mr-1.5" />Mark as Shipped</>}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Proof of Delivery modal ─────────────────────────────────────── */}
+      <Dialog open={!!podModal} onOpenChange={(o) => !o && setPodModal(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-green-500" /> Proof of Delivery
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Upload a photo as delivery confirmation (optional but recommended).</p>
+            <input ref={podInputRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const preview = URL.createObjectURL(file);
+                setPodModal(prev => prev ? { ...prev, file, preview } : null);
+              }}
+            />
+            {podModal?.preview ? (
+              <div className="relative">
+                <img src={podModal.preview} alt="Proof" className="w-full rounded-lg object-cover max-h-48" />
+                <button className="absolute top-1 right-1 bg-black/50 rounded-full p-1" onClick={() => setPodModal(prev => prev ? { ...prev, file: null, preview: "" } : null)}>
+                  <X className="h-3 w-3 text-white" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => podInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 flex flex-col items-center gap-2 hover:border-primary/50 transition-colors"
+              >
+                <Camera className="h-8 w-8 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Tap to add delivery photo</span>
+              </button>
+            )}
+            <div>
+              <Label className="text-xs">Delivery Notes (optional)</Label>
+              <Textarea
+                placeholder="e.g. Left at door, handed to security..."
+                className="mt-1 text-sm resize-none"
+                rows={2}
+                value={podModal?.notes ?? ""}
+                onChange={(e) => setPodModal(prev => prev ? { ...prev, notes: e.target.value } : null)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setPodModal(null)}>Cancel</Button>
+              <Button
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                onClick={submitPOD}
+                disabled={podModal?.uploading}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                {podModal?.uploading ? "Saving…" : "Mark Delivered"}
               </Button>
             </div>
           </div>

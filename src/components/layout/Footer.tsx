@@ -7,9 +7,9 @@ export const Footer = () => {
   const { settings } = useSiteSettings();
   const copyright = (settings.footer_copyright || "© {year} ARTIXO — Made with ❤️ in Sri Lanka")
     .replace("{year}", new Date().getFullYear().toString());
-  const email   = settings.footer_email   || settings.support_email || "support@artixo.lk";
-  const phone   = settings.footer_phone   || settings.support_phone || "+94 11 000 0000";
-  const address = settings.footer_address || settings.address       || "Colombo, Sri Lanka 🇱🇰";
+  const email   = settings.support_email || settings.footer_email   || "support@artixo.lk";
+  const phone   = settings.support_phone || settings.footer_phone   || "+94 11 000 0000";
+  const address = settings.address       || settings.footer_address || "Colombo, Sri Lanka 🇱🇰";
 
   return (
   <footer className="mt-20 relative overflow-hidden" style={{

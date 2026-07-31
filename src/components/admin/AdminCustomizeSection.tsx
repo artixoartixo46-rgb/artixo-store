@@ -15,9 +15,11 @@ const SETUP_SQL = `CREATE TABLE IF NOT EXISTS site_settings (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public read" ON site_settings;
 CREATE POLICY "Public read" ON site_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin write" ON site_settings;
 CREATE POLICY "Admin write" ON site_settings FOR ALL
-  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+  USING (EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'admin'));
 INSERT INTO site_settings (key, value) VALUES
   ('site_name','ARTIXO'),('site_tagline','Sri Lanka''s #1 Marketplace'),
   ('support_email','support@artixo.lk'),('support_phone','+94 11 000 0000'),

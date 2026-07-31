@@ -36,6 +36,7 @@ const Rentals            = lazy(() => import("./pages/Rentals"));
 const Reels              = lazy(() => import("./pages/Reels"));
 const Shoppable          = lazy(() => import("./pages/Shoppable"));
 const VirtualShowroom    = lazy(() => import("./pages/VirtualShowroom"));
+const ConfirmDelivery    = lazy(() => import("./pages/ConfirmDelivery"));
 const NotFound           = lazy(() => import("./pages/NotFound"));
 
 // Capture ?ref= referral code on any page load
@@ -143,6 +144,7 @@ const App = () => {
                     <Route path="/reels"                element={<Reels />} />
                     <Route path="/shoppable"            element={<Shoppable />} />
                     <Route path="/showroom"             element={<VirtualShowroom />} />
+                    <Route path="/confirm-delivery/:token" element={<ConfirmDelivery />} />
                     <Route path="*"                       element={<NotFound />} />
                   </Routes>
                 </Suspense>

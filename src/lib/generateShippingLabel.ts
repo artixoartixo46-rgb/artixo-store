@@ -15,6 +15,7 @@ export interface LabelOrder {
   created_at?: string;
   status?: string;
   shipping_city?: string | null;
+  delivery_token?: string | null;
 }
 
 export interface LabelItem {
@@ -45,7 +46,9 @@ export function generateShippingLabel(opts: {
   const timeStr = order.created_at
     ? new Date(order.created_at).toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })
     : "";
-  const trackingUrl = `https://artixo-store-8phu.vercel.app/orders`;
+  const trackingUrl = order.delivery_token
+    ? `https://artixo-store-8phu.vercel.app/confirm-delivery/${order.delivery_token}`
+    : `https://artixo-store-8phu.vercel.app/orders`;
   const statusLabel = (order.status ?? "confirmed").replace(/_/g, " ").toUpperCase();
   const paymentLabel = order.payment_method === "cod" ? "CASH ON DELIVERY" : "BANK TRANSFER";
   const total = Number(order.total_amount).toLocaleString("en-LK");
